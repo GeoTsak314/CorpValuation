@@ -1,4 +1,4 @@
-# Corp Valuation app v4.1 by George Tsakalos
+# CORP Valuation app v4.6 by George Tsakalos
 
 
 import configparser
@@ -39,7 +39,7 @@ except Exception:
 
 
 # CFG Defaults 
-APP_TITLE = "Corp Valuation app v4.1 (by G.Tsakalos)"
+APP_TITLE = "CORP Valuation app v4.6 (by G.Tsakalos)"
 DEFAULT_DB = "corp_values.sqlite"
 DEFAULT_CFG = "app.cfg"
 DEFAULT_INDEX_MAP = "IndexMap.jpg"
@@ -76,17 +76,21 @@ BALANCE_IMPORT_MAP = {
     9: "right_of_use",
     10: "investment_property",
     11: "other_long_term_receivables",
-    14: "inventory",
-    15: "trade_receivables",
-    16: "other_short_term_receivables",
-    17: "other_current_assets",
-    18: "cash_and_equivalents",
-    26: "share_capital",
-    27: "share_premium",
-    28: "reserves",
-    29: "retained_earnings",
-    32: "long_term_liabilities",
-    33: "short_term_liabilities",
+    12: "non_current_diff",
+    15: "inventory",
+    16: "trade_receivables",
+    17: "other_short_term_receivables",
+    18: "other_current_assets",
+    19: "cash_and_equivalents",
+    20: "current_diff",
+    28: "share_capital",
+    29: "share_premium",
+    30: "reserves",
+    31: "retained_earnings",
+    32: "equity_diff",
+    35: "long_term_liabilities",
+    36: "short_term_liabilities",
+    37: "liabilities_diff",
 }
 
 INCOME_IMPORT_MAP = {
@@ -114,10 +118,10 @@ BALANCE_LAYOUT = [
     ("field", "Άυλα περιουσιακά στοιχεία", "intangible_assets"),
     ("field", "Επενδύσεις σε θυγατρικές επιχειρήσεις", "subsidiary_investments"),
     ("field", "Επενδύσεις σε λοιπές εταιρείες", "other_company_investments"),
-    ("field", "Δικαιώματα χρήσης", "right_of_use"),
+    ("field", "Δικαιωματα χρήσης", "right_of_use"),
     ("field", "Επενδύσεις σε ακίνητα", "investment_property"),
     ("field", "Λοιπές μακροπρόθεσμες απαιτήσεις", "other_long_term_receivables"),
-    ("diff", "Διαφορά", "non_current_diff"),
+    ("diff", "Διάφορα Μη-κυκλοφορούντα", "non_current_diff"),
     ("auto", "Μη-κυκλοφορούν Ενεργητικό", "non_current_assets"),
     ("space", "", None),
     ("field", "Αποθέματα", "inventory"),
@@ -125,7 +129,7 @@ BALANCE_LAYOUT = [
     ("field", "Λοιπές βραχυπρόθεσμες απαιτήσεις", "other_short_term_receivables"),
     ("field", "Λοιποί λογαριασμοί ενεργητικού", "other_current_assets"),
     ("field", "Ταμειακά διαθέσιμα και ισοδύναμα", "cash_and_equivalents"),
-    ("diff", "Διαφορά", "current_diff"),
+    ("diff", "Διάφορα Κυκλοφορούντα", "current_diff"),
     ("auto", "Κυκλοφορούν Ενεργητικό", "current_assets"),
     ("space", "", None),
     ("auto_header", "Σύνολο ΕΝΕΡΓΗΤΙΚΟΥ", "total_assets"),
@@ -135,12 +139,12 @@ BALANCE_LAYOUT = [
     ("field", "Διαφορά υπέρ το άρτιο", "share_premium"),
     ("field", "Αποθεματικά κεφάλαια", "reserves"),
     ("field", "Αποτελέσματα εις νέο", "retained_earnings"),
-    ("diff", "Διαφορά", "equity_diff"),
+    ("diff", "Διάφορα Ι/Κ", "equity_diff"),
     ("auto", "Ι/Κ (Ίδια Κεφάλαια)", "equity"),
     ("space", "", None),
     ("field", "Μακροπρόθεσμες υποχρεώσεις", "long_term_liabilities"),
     ("field", "Βραχυπρόθεσμες υποχρεώσεις", "short_term_liabilities"),
-    ("diff", "Διαφορά", "liabilities_diff"),
+    ("diff", "Διάφορες Υποχρεώσεις", "liabilities_diff"),
     ("auto", "Υποχρεώσεις", "liabilities"),
     ("space", "", None),
     ("auto_header", "Σύνολο ΠΑΘΗΤΙΚΟΥ", "total_liabilities_equity"),
@@ -156,14 +160,14 @@ INCOME_LAYOUT = [
     ("field", "Έξοδα διάθεσης", "selling_expenses"),
     ("field", "Λοιπά έξοδα εκμετάλλευσης", "other_operating_expenses"),
     ("field", "Λοιπά έσοδα εκμετάλλευσης", "other_operating_income"),
-    ("field", "Άλλα Έξοδα", "other_expenses"),
+    ("field", "Άλλα έξοδα", "other_expenses"),
     ("field", "Άλλα έσοδα", "other_income"),
     ("auto", "Αποτελέσματα εκμετάλλ. προ φόρων, χρημ/κών και επενδυτ. Αποτελεσμάτων (EBIT)", "ebit"),
     ("field_bold", "Αποτελέσματα εκμετάλλ. προ φόρων, χρημ/κών και αποσβέσεων (EBITDA)", "ebitda_manual"),
     ("space", "", None),
     ("field", "Αποσβέσεις χρήσης - Ενσώματα πάγια", "depr_tangible"),
     ("field", "Αποσβέσεις χρήσης - Άυλα πάγια", "depr_intangible"),
-    ("auto", "Αποσβέσεις", "depreciation"),
+    ("auto", "Depreciations (Αποσβέσεις Χρήσης)", "depreciation"),
     ("space", "", None),
     ("field", "Χρηματοοικονομικά έξοδα", "financial_expenses"),
     ("field", "Χρηματοοικονομικά έσοδα", "financial_income"),
@@ -176,27 +180,64 @@ INCOME_LAYOUT = [
 ]
 
 RATIO_ORDER = [
-    "Περιθώριο Καθαρού Κέρδους (Profit Margin)",
-    "Κεφαλαιακή Παραγωγικότητα Ενεργητικού (Asset Turnover)",
-    "Απόδοση Συνόλου Ενεργητικού (ROA)",
-    "Χρηματοοικονομική Μόχλευση",
-    "Απόδοση Ιδίων Κεφαλαίων (ROE)",
-    "Current Ratio",
-    "Quick Ratio",
-    "Inventory Turnover Ratio",
-    "Inventory Days",
-    "Receivable Turnover Ratio",
-    "Receivable Days",
-    "Payable Turnover Ratio",
-    "Payable Days",
-    "Operating Cycle",
-    "Working Capital Requirements",
-    "Fixed Asset Turnover",
-    "Total Asset Turnover (based on total revenue)",
+    "Profit Margin (Περιθώριο Καθαρού Κέρδους)",
+    "Asset Turnover (Κεφαλ. Παραγωγικ. Ενεργητικού)",
+    "ROA (Απόδοση Συνόλου Ενεργητικού)",
+    "Financial Leverage (Χρημ/ική Μόχλευση)",
+    "ROE (Απόδοση Ι/Κ)",
+    "Current Ratio (Κεφ./Κίνησης)",
+    "Quick Ratio (Ρευστότητας)",
+    "Inventory Turnover Ratio (Κυκλοφορ. Ταχύτ. Αποθεμάτων σε φορές)",
+    "Inventory Days (Παραμονή Αποθεμάτων σε ημέρες)",
+    "Receivable Turnover Ratio (Κυκλοφορ. Ταχύτ. Απαιτήσεων σε φορές)",
+    "Receivable Days (Παραμονή Απαιτήσεων σε ημέρες)",
+    "Payable Turnover Ratio (Κυκλοφορ. Ταχύτ. Υποχρεώσεων σε φορές)",
+    "Payable Days (Παραμονή Βραχυπρ. Υποχρεώσεων σε ημέρες)",
+    "Operating Cycle (Λειτουργικός Κύκλος σε ημέρες)",
+    "Working Capital Requirements (Ανάγκες σε Κ/Κ)",
+    "Fixed Asset Turnover (Κυκλοφορ. Ταχύτ. Πάγιου Ενεργητικού σε φορές)",
+    "Total Asset Turnover (Κυκλοφορ. Ταχύτ. Ενεργητικού σε φορές)",
     "EBIT",
     "EBITDA",
-    "Αποσβέσεις",
+    "Depreciations (Αποσβέσεις Χρήσης)",
 ]
+
+RATIO_GROUPS = [
+    ("Επενδυτικοί", [
+        "Profit Margin (Περιθώριο Καθαρού Κέρδους)",
+        "Asset Turnover (Κεφαλ. Παραγωγικ. Ενεργητικού)",
+        "ROA (Απόδοση Συνόλου Ενεργητικού)",
+        "Financial Leverage (Χρημ/ική Μόχλευση)",
+        "ROE (Απόδοση Ι/Κ)",
+    ]),
+    ("Ρευστότητας", [
+        "Current Ratio (Κεφ./Κίνησης)",
+        "Quick Ratio (Ρευστότητας)",
+    ]),
+    ("Επιχ. Αποδοτικότητας", [
+        "Inventory Turnover Ratio (Κυκλοφορ. Ταχύτ. Αποθεμάτων σε φορές)",
+        "Inventory Days (Παραμονή Αποθεμάτων σε ημέρες)",
+        "Receivable Turnover Ratio (Κυκλοφορ. Ταχύτ. Απαιτήσεων σε φορές)",
+        "Receivable Days (Παραμονή Απαιτήσεων σε ημέρες)",
+        "Payable Turnover Ratio (Κυκλοφορ. Ταχύτ. Υποχρεώσεων σε φορές)",
+        "Payable Days (Παραμονή Βραχυπρ. Υποχρεώσεων σε ημέρες)",
+        "Operating Cycle (Λειτουργικός Κύκλος σε ημέρες)",
+        "Working Capital Requirements (Ανάγκες σε Κ/Κ)",
+        "Fixed Asset Turnover (Κυκλοφορ. Ταχύτ. Πάγιου Ενεργητικού σε φορές)",
+        "Total Asset Turnover (Κυκλοφορ. Ταχύτ. Ενεργητικού σε φορές)",
+        "EBIT",
+        "EBITDA",
+        "Depreciations (Αποσβέσεις Χρήσης)",
+    ]),
+]
+
+
+def iter_grouped_ratios():
+    for group_name, ratio_names in RATIO_GROUPS:
+        yield ("__GROUP__", group_name)
+        for ratio_name in ratio_names:
+            yield ("ratio", ratio_name)
+
 
 
 
@@ -243,6 +284,52 @@ def open_url(url: str):
     webbrowser.open(url)
 
 
+
+def format_thousands_dot(value):
+    if value in (None, ""):
+        return ""
+    try:
+        v = float(value)
+        negative = v < 0
+        v = abs(v)
+        if abs(v - round(v)) < 1e-9:
+            s = f"{int(round(v)):,}".replace(",", ".")
+        else:
+            s = f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        return f"-{s}" if negative else s
+    except Exception:
+        return str(value)
+
+
+def strip_thousands_format(text):
+    text = (text or "").strip()
+    if not text:
+        return ""
+    return text.replace(".", "").replace(",", ".")
+
+
+def format_entry_thousands(entry):
+    try:
+        value = entry.get().strip()
+        if not value:
+            return
+        parsed = safe_float(value)
+        entry.delete(0, "end")
+        entry.insert(0, format_thousands_dot(parsed))
+    except Exception:
+        pass
+
+
+def unformat_entry_thousands(entry):
+    try:
+        value = entry.get().strip()
+        if not value:
+            return
+        entry.delete(0, "end")
+        entry.insert(0, strip_thousands_format(value))
+    except Exception:
+        pass
+
 def safe_float(value) -> float:
     if value in (None, ""):
         return 0.0
@@ -254,8 +341,12 @@ def safe_float(value) -> float:
             s = s.replace(".", "").replace(",", ".")
         else:
             s = s.replace(",", "")
-    else:
-        s = s.replace(".", "").replace(",", ".") if "," in s else s
+    elif "," in s:
+        s = s.replace(".", "").replace(",", ".")
+    elif "." in s:
+        parts = s.split(".")
+        if len(parts) > 2 or (len(parts) > 1 and all(len(p) == 3 for p in parts[1:])):
+            s = "".join(parts)
     try:
         return float(s)
     except Exception:
@@ -381,9 +472,14 @@ def add_report_charts_sheet(wb, report_rows: list[dict]):
 
     ws = wb.create_sheet("Charts")
     ws.append(["Metric"] + [a["year"] for a in report_rows])
+    metric_map = {
+        "EBIT": [a["ratios"].get("EBIT") for a in report_rows],
+        "ROA": [a["ratios"].get("ROA (Απόδοση Συνόλου Ενεργητικού)") for a in report_rows],
+        "ROE": [a["ratios"].get("ROE (Απόδοση Ι/Κ)") for a in report_rows],
+    }
     metric_names = ["EBIT", "ROA", "ROE"]
     for metric in metric_names:
-        ws.append([metric] + [a["ratios"].get(metric) for a in report_rows])
+        ws.append([metric] + metric_map[metric])
 
     style_excel_header(ws, 1, "E2F0D9")
     chart_positions = {"EBIT": "A6", "ROA": "J6", "ROE": "A24"}
@@ -410,6 +506,7 @@ class SQLiteDB:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(self.path)
         self.conn.row_factory = sqlite3.Row
+        self.conn.execute("PRAGMA foreign_keys = ON")
         self.init_schema()
 
     def close(self):
@@ -603,6 +700,10 @@ class SQLiteDB:
         ).fetchone()
         return row["note"] if row else ""
 
+    def delete_company(self, company_id: int):
+        self.conn.execute("DELETE FROM companies WHERE id=?", (company_id,))
+        self.conn.commit()
+
     def get_company(self, company_id: int):
         return self.get_by_id("companies", company_id)
 
@@ -775,26 +876,26 @@ def build_analysis(company: dict, year: int, balance: dict, income: dict, prev_b
         "year": year,
         "totals": {**bt, **it, "working_capital_requirements": working_capital_requirements},
         "ratios": {
-            "Περιθώριο Καθαρού Κέρδους (Profit Margin)": profit_margin,
-            "Κεφαλαιακή Παραγωγικότητα Ενεργητικού (Asset Turnover)": asset_turnover,
-            "Απόδοση Συνόλου Ενεργητικού (ROA)": roa,
-            "Χρηματοοικονομική Μόχλευση": financial_leverage,
-            "Απόδοση Ιδίων Κεφαλαίων (ROE)": roe,
-            "Current Ratio": current_ratio,
-            "Quick Ratio": quick_ratio,
-            "Inventory Turnover Ratio": inventory_turnover,
-            "Inventory Days": inventory_days,
-            "Receivable Turnover Ratio": receivable_turnover,
-            "Receivable Days": receivable_days,
-            "Payable Turnover Ratio": payable_turnover,
-            "Payable Days": payable_days,
-            "Operating Cycle": operating_cycle,
-            "Working Capital Requirements": working_capital_requirements,
-            "Fixed Asset Turnover": fixed_asset_turnover,
-            "Total Asset Turnover (based on total revenue)": total_asset_turnover_2,
+            "Profit Margin (Περιθώριο Καθαρού Κέρδους)": profit_margin,
+            "Asset Turnover (Κεφαλ. Παραγωγικ. Ενεργητικού)": asset_turnover,
+            "ROA (Απόδοση Συνόλου Ενεργητικού)": roa,
+            "Financial Leverage (Χρημ/ική Μόχλευση)": financial_leverage,
+            "ROE (Απόδοση Ι/Κ)": roe,
+            "Current Ratio (Κεφ./Κίνησης)": current_ratio,
+            "Quick Ratio (Ρευστότητας)": quick_ratio,
+            "Inventory Turnover Ratio (Κυκλοφορ. Ταχύτ. Αποθεμάτων σε φορές)": inventory_turnover,
+            "Inventory Days (Παραμονή Αποθεμάτων σε ημέρες)": inventory_days,
+            "Receivable Turnover Ratio (Κυκλοφορ. Ταχύτ. Απαιτήσεων σε φορές)": receivable_turnover,
+            "Receivable Days (Παραμονή Απαιτήσεων σε ημέρες)": receivable_days,
+            "Payable Turnover Ratio (Κυκλοφορ. Ταχύτ. Υποχρεώσεων σε φορές)": payable_turnover,
+            "Payable Days (Παραμονή Βραχυπρ. Υποχρεώσεων σε ημέρες)": payable_days,
+            "Operating Cycle (Λειτουργικός Κύκλος σε ημέρες)": operating_cycle,
+            "Working Capital Requirements (Ανάγκες σε Κ/Κ)": working_capital_requirements,
+            "Fixed Asset Turnover (Κυκλοφορ. Ταχύτ. Πάγιου Ενεργητικού σε φορές)": fixed_asset_turnover,
+            "Total Asset Turnover (Κυκλοφορ. Ταχύτ. Ενεργητικού σε φορές)": total_asset_turnover_2,
             "EBIT": it["ebit"],
             "EBITDA": it["ebitda"],
-            "Αποσβέσεις": it["depreciation"],
+            "Depreciations (Αποσβέσεις Χρήσης)": it["depreciation"],
         },
     }
 
@@ -874,6 +975,7 @@ class CompanyTab(ttk.Frame):
         ttk.Button(top, text="New", command=self.new_form).pack(side="left", padx=(15, 5))
         ttk.Button(top, text="Save", command=self.save_company).pack(side="left", padx=5)
         ttk.Button(top, text="Edit selected", command=self.load_selected).pack(side="left", padx=5)
+        ttk.Button(top, text="Delete", command=self.delete_selected).pack(side="left", padx=5)
         ttk.Button(top, text="Import Excel", command=self.import_excel).pack(side="left", padx=(15, 5))
 
         content = ttk.Frame(self)
@@ -956,6 +1058,34 @@ class CompanyTab(ttk.Frame):
         self.current_id = saved["id"]
         self.refresh_list()
         messagebox.showinfo(APP_TITLE, "Η εταιρεία αποθηκεύτηκε.")
+
+    def delete_selected(self):
+        sel = self.tree.selection()
+        if not sel:
+            messagebox.showinfo(APP_TITLE, "Επίλεξε πρώτα εταιρεία από τη λίστα.")
+            return
+        row = self.app.db.get_company(int(sel[0]))
+        if not row:
+            return
+        answer = messagebox.askyesno(
+            APP_TITLE,
+            f"Να διαγραφεί η εταιρεία '{row.get('name', '')}' και όλα τα σχετικά δεδομένα της;"
+        )
+        if not answer:
+            return
+        self.app.db.delete_company(int(sel[0]))
+        self.new_form()
+        self.refresh_list()
+        if hasattr(self.app, "balance_tab"):
+            self.app.balance_tab.refresh_records()
+        if hasattr(self.app, "income_tab"):
+            self.app.income_tab.refresh_records()
+        if hasattr(self.app, "analysis_tab"):
+            self.app.analysis_tab.clear_report()
+        if hasattr(self.app, "compare_tab"):
+            self.app.compare_tab.refresh_year_options()
+            self.app.compare_tab.clear_results()
+        messagebox.showinfo(APP_TITLE, "Η εταιρεία διαγράφηκε.")
 
     def import_excel(self):
         file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xlsm")], title="Επίλεξε αρχείο Import Template")
@@ -1151,6 +1281,10 @@ class BalanceSheetTab(BaseStatementTab):
                 e = ttk.Entry(inner, textvariable=self.input_vars[key], width=18)
                 e.grid(row=row, column=1, sticky="ew", padx=(0, 8), pady=3)
                 e.bind("<KeyRelease>", lambda event: self.update_auto_fields())
+                e.bind("<FocusIn>", lambda event, ent=e: unformat_entry_thousands(ent))
+                e.bind("<FocusOut>", lambda event, ent=e: (format_entry_thousands(ent), self.update_auto_fields()))
+                e.bind("<FocusIn>", lambda event, ent=e: unformat_entry_thousands(ent))
+                e.bind("<FocusOut>", lambda event, ent=e: (format_entry_thousands(ent), self.update_auto_fields()))
                 self.entry_widgets[key] = e
             elif kind == "auto":
                 ttk.Label(inner, text=label, font=("Segoe UI", 10, "bold")).grid(row=row, column=0, sticky="w", padx=(8, 8), pady=3)
@@ -1182,7 +1316,7 @@ class BalanceSheetTab(BaseStatementTab):
 
     def populate_fields(self, row):
         for k in self.input_vars:
-            self.input_vars[k].set("" if abs(safe_float(row.get(k))) < 0.0000001 else str(row.get(k, "")))
+            self.input_vars[k].set("" if abs(safe_float(row.get(k))) < 0.0000001 else format_thousands_dot(row.get(k, "")))
         self.comments_text.delete("1.0", "end")
         self.comments_text.insert("1.0", row.get("comments", ""))
         self.update_auto_fields()
@@ -1212,6 +1346,8 @@ class IncomeSheetTab(BaseStatementTab):
                 e = ttk.Entry(inner, textvariable=self.input_vars[key], width=18)
                 e.grid(row=row, column=1, sticky="ew", padx=(0, 8), pady=3)
                 e.bind("<KeyRelease>", lambda event: self.update_auto_fields())
+                e.bind("<FocusIn>", lambda event, ent=e: unformat_entry_thousands(ent))
+                e.bind("<FocusOut>", lambda event, ent=e: (format_entry_thousands(ent), self.update_auto_fields()))
             elif kind == "auto":
                 ttk.Label(inner, text=label, font=("Segoe UI", 10, "bold")).grid(row=row, column=0, sticky="w", padx=(8, 8), pady=3)
                 ttk.Entry(inner, textvariable=self.auto_vars[key], width=24, state="readonly").grid(row=row, column=1, sticky="ew", padx=(0, 8), pady=3)
@@ -1236,7 +1372,7 @@ class IncomeSheetTab(BaseStatementTab):
 
     def populate_fields(self, row):
         for k in self.input_vars:
-            self.input_vars[k].set("" if abs(safe_float(row.get(k))) < 0.0000001 else str(row.get(k, "")))
+            self.input_vars[k].set("" if abs(safe_float(row.get(k))) < 0.0000001 else format_thousands_dot(row.get(k, "")))
         self.comments_text.delete("1.0", "end")
         self.comments_text.insert("1.0", row.get("comments", ""))
         self.update_auto_fields()
@@ -1309,6 +1445,19 @@ class AnalysisTab(ttk.Frame):
         self.company_map = {text: cid for cid, text in options}
         self.company_combo["values"] = [text for _, text in options]
 
+    def clear_report(self):
+        self.current_report_rows = []
+        self.current_company = None
+        self.current_ratio = None
+        self.company_var.set("")
+        self.ratio_name_var.set("")
+        self.note_text.delete("1.0", "end")
+        self.info_label.configure(text="Διάλεξε εταιρεία και πάτησε Υπολογισμός.")
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        for col in ["y1", "y2", "y3", "y4"]:
+            self.tree.heading(col, text="-")
+
     def collect_company_analysis(self, company_id: int):
         company = self.app.db.get_company(company_id)
         years = self.app.db.years_for_company(company_id)
@@ -1343,11 +1492,16 @@ class AnalysisTab(ttk.Frame):
         for item in self.tree.get_children():
             self.tree.delete(item)
 
-        for ratio_name in RATIO_ORDER:
+        for item_type, label in iter_grouped_ratios():
+            if item_type == "__GROUP__":
+                row = [label, "", "", "", ""]
+                self.tree.insert("", "end", iid=f"group::{label}", values=row, tags=("group_heading",))
+                continue
+            ratio_name = label
             row = [ratio_name]
             for analysis in analyses[:4]:
                 val = analysis["ratios"].get(ratio_name)
-                if ratio_name in {"EBIT", "EBITDA", "Αποσβέσεις", "Working Capital Requirements"} or "Days" in ratio_name:
+                if ratio_name in {"EBIT", "EBITDA", "Depreciations (Αποσβέσεις Χρήσης)", "Working Capital Requirements (Ανάγκες σε Κ/Κ)"} or "Days" in ratio_name:
                     row.append(fmt_num(val) if val is not None else "-")
                 else:
                     row.append(fmt_pct(val) if val is not None and abs(val) < 10 else fmt_num(val) if val is not None else "-")
@@ -1355,6 +1509,7 @@ class AnalysisTab(ttk.Frame):
                 row.append("")
             self.tree.insert("", "end", iid=ratio_name, values=row)
 
+        self.tree.tag_configure("group_heading", font=("Segoe UI", 10, "bold"))
         self.info_label.configure(text=f"Εταιρεία: {company.get('name','')} | Διαθέσιμα έτη: {', '.join(map(str, years))}")
         self.current_ratio = None
         self.ratio_name_var.set("")
@@ -1372,6 +1527,8 @@ class AnalysisTab(ttk.Frame):
             return
         previous_ratio = self.current_ratio
         new_ratio = sel[0]
+        if new_ratio.startswith("group::"):
+            return
 
         if previous_ratio and previous_ratio != new_ratio:
             self._save_current_ratio_note_silent()
@@ -1393,7 +1550,7 @@ class AnalysisTab(ttk.Frame):
         canvas.saveState()
         font_regular, _ = register_pdf_fonts()
         canvas.setFont("Helvetica", 7)
-        canvas.drawCentredString(A4[0] / 2, 1 * cm, "Corp Valuation app - by G.Tsakalos")
+        canvas.drawCentredString(A4[0] / 2, 1 * cm, "CORP Valuation app by G.Tsakalos")
         canvas.restoreState()
 
     def _make_pdf_chart(self, title, years, values, width=17.5 * cm, height=6.2 * cm):
@@ -1404,7 +1561,7 @@ class AnalysisTab(ttk.Frame):
         chart.y = 35
         chart.height = height - 70
         chart.width = width - 70
-        safe_values = [0 if v is None else float(v) for v in values]
+        safe_values = [0 if v is None else round(float(v), 2) for v in values]
         chart.data = [safe_values]
         chart.categoryAxis.categoryNames = [str(y) for y in years]
         chart.categoryAxis.labels.boxAnchor = 'n'
@@ -1422,6 +1579,7 @@ class AnalysisTab(ttk.Frame):
         chart.valueAxis.valueMin = min_val - pad
         chart.valueAxis.valueMax = max_val + pad
         chart.valueAxis.valueStep = max((chart.valueAxis.valueMax - chart.valueAxis.valueMin) / 5.0, 1)
+        chart.valueAxis.labelTextFormat = "%.2f"
         drawing.add(chart)
         return drawing
 
@@ -1460,11 +1618,16 @@ class AnalysisTab(ttk.Frame):
             years = [a["year"] for a in analyses[:4]]
             header = ["Δείκτης"] + [str(y) for y in years] + ["Σημείωση"]
             data = [header]
-            for ratio_name in RATIO_ORDER:
+            for item_type, label in iter_grouped_ratios():
+                if item_type == "__GROUP__":
+                    group_row = [Paragraph(f"<b>{label}</b>", styles["GreekSmall"])] + [""] * len(years) + [""]
+                    data.append(group_row)
+                    continue
+                ratio_name = label
                 row = [Paragraph(ratio_name, styles["GreekSmall"])]
                 for analysis in analyses[:4]:
                     val = analysis["ratios"].get(ratio_name)
-                    if ratio_name in {"EBIT", "EBITDA", "Αποσβέσεις", "Working Capital Requirements"} or "Days" in ratio_name:
+                    if ratio_name in {"EBIT", "EBITDA", "Depreciations (Αποσβέσεις Χρήσης)", "Working Capital Requirements (Ανάγκες σε Κ/Κ)"} or "Days" in ratio_name:
                         shown = fmt_num(val) if val is not None else "-"
                     else:
                         shown = fmt_pct(val) if val is not None and abs(val) < 10 else fmt_num(val) if val is not None else "-"
@@ -1496,8 +1659,8 @@ class AnalysisTab(ttk.Frame):
                 story.append(Spacer(1, 0.15 * cm))
                 metric_map = {
                     "EBIT": [a["ratios"].get("EBIT") for a in reversed(analyses)],
-                    "ROA": [None if a["ratios"].get("Απόδοση Συνόλου Ενεργητικού (ROA)") is None else a["ratios"].get("Απόδοση Συνόλου Ενεργητικού (ROA)") * 100 for a in reversed(analyses)],
-                    "ROE": [None if a["ratios"].get("Απόδοση Ιδίων Κεφαλαίων (ROE)") is None else a["ratios"].get("Απόδοση Ιδίων Κεφαλαίων (ROE)") * 100 for a in reversed(analyses)],
+                    "ROA": [None if a["ratios"].get("ROA (Απόδοση Συνόλου Ενεργητικού)") is None else a["ratios"].get("ROA (Απόδοση Συνόλου Ενεργητικού)") * 100 for a in reversed(analyses)],
+                    "ROE": [None if a["ratios"].get("ROE (Απόδοση Ι/Κ)") is None else a["ratios"].get("ROE (Απόδοση Ι/Κ)") * 100 for a in reversed(analyses)],
                 }
                 for idx, (title, values) in enumerate(metric_map.items()):
                     drawing = self._make_pdf_chart(title, chart_years, values)
@@ -1550,19 +1713,25 @@ class AnalysisTab(ttk.Frame):
             style_excel_header(ws, header_row)
 
             percent_ratios = {
-                "Περιθώριο Καθαρού Κέρδους (Profit Margin)",
-                "Κεφαλαιακή Παραγωγικότητα Ενεργητικού (Asset Turnover)",
-                "Απόδοση Συνόλου Ενεργητικού (ROA)",
-                "Χρηματοοικονομική Μόχλευση",
-                "Απόδοση Ιδίων Κεφαλαίων (ROE)",
-                "Current Ratio",
-                "Quick Ratio",
-                "Receivable Turnover Ratio",
-                "Fixed Asset Turnover",
-                "Total Asset Turnover (based on total revenue)",
+                "Profit Margin (Περιθώριο Καθαρού Κέρδους)",
+                "Asset Turnover (Κεφαλ. Παραγωγικ. Ενεργητικού)",
+                "ROA (Απόδοση Συνόλου Ενεργητικού)",
+                "Financial Leverage (Χρημ/ική Μόχλευση)",
+                "ROE (Απόδοση Ι/Κ)",
+                "Current Ratio (Κεφ./Κίνησης)",
+                "Quick Ratio (Ρευστότητας)",
+                "Receivable Turnover Ratio (Κυκλοφορ. Ταχύτ. Απαιτήσεων σε φορές)",
+                "Fixed Asset Turnover (Κυκλοφορ. Ταχύτ. Πάγιου Ενεργητικού σε φορές)",
+                "Total Asset Turnover (Κυκλοφορ. Ταχύτ. Ενεργητικού σε φορές)",
             }
 
-            for ratio_name in RATIO_ORDER:
+            group_heading_rows = []
+            for item_type, label in iter_grouped_ratios():
+                if item_type == "__GROUP__":
+                    ws.append([label] + [""] * len(years) + [""])
+                    group_heading_rows.append(ws.max_row)
+                    continue
+                ratio_name = label
                 row = [ratio_name]
                 for analysis in self.current_report_rows[:4]:
                     row.append(analysis["ratios"].get(ratio_name))
@@ -1583,20 +1752,25 @@ class AnalysisTab(ttk.Frame):
                 ws.cell(r, 1).alignment = openpyxl.styles.Alignment(wrap_text=True, vertical='top')
                 ws.cell(r, 2 + len(years)).alignment = openpyxl.styles.Alignment(wrap_text=True, vertical='top')
 
+            for r in group_heading_rows:
+                for c in range(1, ws.max_column + 1):
+                    cell = ws.cell(r, c)
+                    cell.font = openpyxl.styles.Font(bold=True)
+                    cell.fill = openpyxl.styles.PatternFill("solid", fgColor="E2F0D9")
             ws.freeze_panes = f"A{start_data_row}"
             ws.auto_filter.ref = f"A{header_row}:{openpyxl.utils.get_column_letter(ws.max_column)}{ws.max_row}"
             autosize_worksheet(ws, min_width=12, max_width=42)
 
             totals_ws = wb.create_sheet("Totals")
-            totals_ws.append(["Έτος", "EBIT", "EBITDA", "Αποσβέσεις", "Working Capital Requirements"])
+            totals_ws.append(["Έτος", "EBIT", "EBITDA", "Depreciations (Αποσβέσεις Χρήσης)", "Working Capital Requirements (Ανάγκες σε Κ/Κ)"])
             style_excel_header(totals_ws, 1, "E2F0D9")
             for analysis in self.current_report_rows[:4]:
                 totals_ws.append([
                     analysis["year"],
                     analysis["ratios"].get("EBIT"),
                     analysis["ratios"].get("EBITDA"),
-                    analysis["ratios"].get("Αποσβέσεις"),
-                    analysis["ratios"].get("Working Capital Requirements"),
+                    analysis["ratios"].get("Depreciations (Αποσβέσεις Χρήσης)"),
+                    analysis["ratios"].get("Working Capital Requirements (Ανάγκες σε Κ/Κ)"),
                 ])
             for row in totals_ws.iter_rows(min_row=2, min_col=2):
                 for cell in row:
@@ -1605,7 +1779,7 @@ class AnalysisTab(ttk.Frame):
 
             add_report_charts_sheet(wb, self.current_report_rows[:4])
             wb.save(path)
-            TEMP1
+            messagebox.showinfo(APP_TITLE, f"Το αρχείο XLSX δημιουργήθηκε:\n{path}")
         except Exception as e:
             messagebox.showerror(APP_TITLE, f"Αποτυχία export XLSX:\n{e}")
 
@@ -1668,6 +1842,10 @@ class CompareTab(ttk.Frame):
         frame.rowconfigure(0, weight=1)
         frame.columnconfigure(0, weight=1)
 
+    def clear_results(self):
+        self.current_rows = []
+        self.tree.delete(*self.tree.get_children())
+
     def refresh_year_options(self):
         years = self.app.db.all_years()
         self.year_combo["values"] = [str(y) for y in years]
@@ -1677,7 +1855,7 @@ class CompareTab(ttk.Frame):
     def _format_compare_value(self, ratio_name, val):
         if val is None:
             return "-"
-        if ratio_name in {"EBIT", "EBITDA", "Αποσβέσεις", "Working Capital Requirements"} or "Days" in ratio_name:
+        if ratio_name in {"EBIT", "EBITDA", "Depreciations (Αποσβέσεις Χρήσης)", "Working Capital Requirements (Ανάγκες σε Κ/Κ)"} or "Days" in ratio_name:
             return fmt_num(val)
         return fmt_pct(val) if abs(val) < 10 else fmt_num(val)
 
@@ -1750,16 +1928,16 @@ class CompareTab(ttk.Frame):
             style_excel_header(ws, header_row)
 
             percent_ratios = {
-                "Περιθώριο Καθαρού Κέρδους (Profit Margin)",
-                "Κεφαλαιακή Παραγωγικότητα Ενεργητικού (Asset Turnover)",
-                "Απόδοση Συνόλου Ενεργητικού (ROA)",
-                "Χρηματοοικονομική Μόχλευση",
-                "Απόδοση Ιδίων Κεφαλαίων (ROE)",
-                "Current Ratio",
-                "Quick Ratio",
-                "Receivable Turnover Ratio",
-                "Fixed Asset Turnover",
-                "Total Asset Turnover (based on total revenue)",
+                "Profit Margin (Περιθώριο Καθαρού Κέρδους)",
+                "Asset Turnover (Κεφαλ. Παραγωγικ. Ενεργητικού)",
+                "ROA (Απόδοση Συνόλου Ενεργητικού)",
+                "Financial Leverage (Χρημ/ική Μόχλευση)",
+                "ROE (Απόδοση Ι/Κ)",
+                "Current Ratio (Κεφ./Κίνησης)",
+                "Quick Ratio (Ρευστότητας)",
+                "Receivable Turnover Ratio (Κυκλοφορ. Ταχύτ. Απαιτήσεων σε φορές)",
+                "Fixed Asset Turnover (Κυκλοφορ. Ταχύτ. Πάγιου Ενεργητικού σε φορές)",
+                "Total Asset Turnover (Κυκλοφορ. Ταχύτ. Ενεργητικού σε φορές)",
             }
 
             for row in self.current_rows:
