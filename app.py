@@ -1,4 +1,4 @@
-# CORP Valuation app v4.6 by George Tsakalos
+# CORP Valuation app v5.7 by George Tsakalos
 
 
 import configparser
@@ -22,10 +22,10 @@ except Exception:
 
 try:
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import cm
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+    from reportlab.platypus import SimpleDocTemplate, BaseDocTemplate, PageTemplate, Frame, NextPageTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
     from reportlab.graphics.shapes import Drawing, String
@@ -39,7 +39,7 @@ except Exception:
 
 
 # CFG Defaults 
-APP_TITLE = "CORP Valuation app v4.6 (by G.Tsakalos)"
+APP_TITLE = "CORP Valuation app v5.7 (by G.Tsakalos)"
 DEFAULT_DB = "corp_values.sqlite"
 DEFAULT_CFG = "app.cfg"
 DEFAULT_INDEX_MAP = "IndexMap.jpg"
@@ -62,10 +62,14 @@ BALANCE_NUMERIC_FIELDS = [
 ]
 
 INCOME_NUMERIC_FIELDS = [
-    "net_sales", "state_grants", "cost_of_sales", "admin_expenses", "selling_expenses",
-    "other_operating_expenses", "other_operating_income", "other_expenses", "other_income",
-    "depr_tangible", "depr_intangible", "financial_expenses", "financial_income",
-    "other_financial_results", "dividend_income", "income_taxes", "ebitda_manual"
+    "net_sales", "state_grants", "cost_of_sales",
+    "admin_expenses", "selling_expenses", "research_expenses", "provisions_expenses",
+    "other_operating_expenses", "inventory_revaluation_losses", "other_expenses",
+    "other_operating_income", "inventory_revaluation_gains", "other_income",
+    "depr_tangible", "depr_intangible",
+    "dividend_income", "financial_expenses", "other_financial_losses",
+    "financial_income", "other_financial_gains",
+    "income_taxes", "ebitda_manual"
 ]
 
 BALANCE_IMPORT_MAP = {
@@ -97,19 +101,25 @@ INCOME_IMPORT_MAP = {
     3: "net_sales",
     4: "state_grants",
     5: "cost_of_sales",
-    8: "admin_expenses",
-    9: "other_operating_expenses",
-    10: "other_operating_income",
-    11: "other_expenses",
-    12: "other_income",
-    14: "ebitda_manual",
-    16: "depr_tangible",
-    17: "depr_intangible",
-    20: "financial_expenses",
-    21: "financial_income",
-    22: "other_financial_results",
-    23: "dividend_income",
-    26: "income_taxes",
+    9: "other_operating_income",
+    10: "inventory_revaluation_gains",
+    11: "other_income",
+    13: "admin_expenses",
+    14: "selling_expenses",
+    15: "research_expenses",
+    16: "provisions_expenses",
+    17: "other_operating_expenses",
+    18: "inventory_revaluation_losses",
+    19: "other_expenses",
+    21: "ebitda_manual",
+    23: "depr_tangible",
+    24: "depr_intangible",
+    27: "financial_income",
+    28: "other_financial_gains",
+    29: "dividend_income",
+    30: "other_financial_losses",
+    31: "financial_expenses",
+    34: "income_taxes",
 }
 
 BALANCE_LAYOUT = [
@@ -156,25 +166,39 @@ INCOME_LAYOUT = [
     ("field", "Κόστος πωλήσεων", "cost_of_sales"),
     ("auto", "Μικτό κέρδος (/ζημιά)", "gross_profit"),
     ("space", "", None),
+
+    ("header", "ΕΞΟΔΑ", None),
     ("field", "Έξοδα διοίκησης", "admin_expenses"),
     ("field", "Έξοδα διάθεσης", "selling_expenses"),
+    ("field", "Έξοδα έρευνας", "research_expenses"),
+    ("field", "Έξοδα προβλέψεων", "provisions_expenses"),
     ("field", "Λοιπά έξοδα εκμετάλλευσης", "other_operating_expenses"),
-    ("field", "Λοιπά έσοδα εκμετάλλευσης", "other_operating_income"),
+    ("field", "Ζημιές από επιμέτρηση αποθεμάτων", "inventory_revaluation_losses"),
     ("field", "Άλλα έξοδα", "other_expenses"),
+    ("space", "", None),
+
+    ("header", "ΕΣΟΔΑ", None),
+    ("field", "Λοιπά έσοδα εκμετάλλευσης", "other_operating_income"),
+    ("field", "Κέρδη από επιμέτρηση αποθεμάτων", "inventory_revaluation_gains"),
     ("field", "Άλλα έσοδα", "other_income"),
     ("auto", "Αποτελέσματα εκμετάλλ. προ φόρων, χρημ/κών και επενδυτ. Αποτελεσμάτων (EBIT)", "ebit"),
     ("field_bold", "Αποτελέσματα εκμετάλλ. προ φόρων, χρημ/κών και αποσβέσεων (EBITDA)", "ebitda_manual"),
     ("space", "", None),
+
     ("field", "Αποσβέσεις χρήσης - Ενσώματα πάγια", "depr_tangible"),
     ("field", "Αποσβέσεις χρήσης - Άυλα πάγια", "depr_intangible"),
     ("auto", "Depreciations (Αποσβέσεις Χρήσης)", "depreciation"),
     ("space", "", None),
+
     ("field", "Χρηματοοικονομικά έξοδα", "financial_expenses"),
-    ("field", "Χρηματοοικονομικά έσοδα", "financial_income"),
-    ("field", "Λοιπά χρηματοοικονομικά αποτελέσματα", "other_financial_results"),
+    ("field", "Λοιπές Ζημιές", "other_financial_losses"),
+    ("space", "", None),
     ("field", "Έσοδα από μερίσματα", "dividend_income"),
+    ("field", "Χρηματοοικονομικά έσοδα", "financial_income"),
+    ("field", "Λοιπά Κέρδη", "other_financial_gains"),
     ("auto", "Αποτελέσματα προ φόρων", "pbt"),
     ("space", "", None),
+
     ("field", "Φόροι Εισοδήματος", "income_taxes"),
     ("auto", "Αποτελέσματα χρήσης μετά φόρων", "pat"),
 ]
@@ -237,6 +261,44 @@ def iter_grouped_ratios():
         yield ("__GROUP__", group_name)
         for ratio_name in ratio_names:
             yield ("ratio", ratio_name)
+
+PERCENT_RATIOS = {
+    "Profit Margin (Περιθώριο Καθαρού Κέρδους)",
+    "ROA (Απόδοση Συνόλου Ενεργητικού)",
+    "ROE (Απόδοση Ι/Κ)",}
+
+PLAIN_RATIO_RATIOS = {
+    "Asset Turnover (Κεφαλ. Παραγωγικ. Ενεργητικού)",
+    "Financial Leverage (Χρημ/ική Μόχλευση)",
+    "Current Ratio (Κεφ./Κίνησης)",
+    "Quick Ratio (Ρευστότητας)",
+    "Inventory Turnover Ratio (Κυκλοφορ. Ταχύτ. Αποθεμάτων σε φορές)",
+    "Receivable Turnover Ratio (Κυκλοφορ. Ταχύτ. Απαιτήσεων σε φορές)",
+    "Payable Turnover Ratio (Κυκλοφορ. Ταχύτ. Υποχρεώσεων σε φορές)",
+    "Fixed Asset Turnover (Κυκλοφορ. Ταχύτ. Πάγιου Ενεργητικού σε φορές)",
+    "Total Asset Turnover (Κυκλοφορ. Ταχύτ. Ενεργητικού σε φορές)",}
+
+AMOUNT_RATIOS = {
+    "Working Capital Requirements (Ανάγκες σε Κ/Κ)",
+    "EBIT",
+    "EBITDA",
+    "Depreciations (Αποσβέσεις Χρήσης)",}
+
+
+DECIMAL4_RATIOS = {
+    "Asset Turnover (Κεφαλ. Παραγωγικ. Ενεργητικού)",}
+
+def format_ratio_display(ratio_name: str, value):
+    if value is None:
+        return "-"
+    if ratio_name in PERCENT_RATIOS:
+        return fmt_pct(value)
+    if ratio_name in DECIMAL4_RATIOS:
+        return fmt_num4(value)
+    return fmt_num(value)
+
+def is_percent_ratio(ratio_name: str) -> bool:
+    return ratio_name in PERCENT_RATIOS
 
 
 
@@ -356,6 +418,13 @@ def safe_float(value) -> float:
 def fmt_num(value):
     try:
         return f"{float(value):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    except Exception:
+        return "-"
+
+
+def fmt_num4(value):
+    try:
+        return f"{float(value):,.4f}".replace(",", "X").replace(".", ",").replace("X", ".")
     except Exception:
         return "-"
 
@@ -580,14 +649,20 @@ class SQLiteDB:
                 cost_of_sales REAL DEFAULT 0,
                 admin_expenses REAL DEFAULT 0,
                 selling_expenses REAL DEFAULT 0,
+                research_expenses REAL DEFAULT 0,
+                provisions_expenses REAL DEFAULT 0,
                 other_operating_expenses REAL DEFAULT 0,
-                other_operating_income REAL DEFAULT 0,
+                inventory_revaluation_losses REAL DEFAULT 0,
                 other_expenses REAL DEFAULT 0,
+                other_operating_income REAL DEFAULT 0,
+                inventory_revaluation_gains REAL DEFAULT 0,
                 other_income REAL DEFAULT 0,
                 depr_tangible REAL DEFAULT 0,
                 depr_intangible REAL DEFAULT 0,
                 financial_expenses REAL DEFAULT 0,
+                other_financial_losses REAL DEFAULT 0,
                 financial_income REAL DEFAULT 0,
+                other_financial_gains REAL DEFAULT 0,
                 other_financial_results REAL DEFAULT 0,
                 dividend_income REAL DEFAULT 0,
                 income_taxes REAL DEFAULT 0,
@@ -619,8 +694,12 @@ class SQLiteDB:
         for col in ["non_current_diff", "current_diff", "equity_diff", "liabilities_diff"]:
             self._ensure_column("balance_sheets", col, "REAL", "0")
         self._ensure_column("balance_sheets", "comments", "TEXT", "''")
-        self._ensure_column("income_sheets", "other_expenses", "REAL", "0")
-        self._ensure_column("income_sheets", "ebitda_manual", "REAL", "0")
+        for col in [
+            "research_expenses", "provisions_expenses", "inventory_revaluation_losses",
+            "inventory_revaluation_gains", "other_financial_losses", "other_financial_gains",
+            "other_expenses", "ebitda_manual"
+        ]:
+            self._ensure_column("income_sheets", col, "REAL", "0")
         self._ensure_column("income_sheets", "comments", "TEXT", "''")
         self.conn.execute(
             """
@@ -806,19 +885,86 @@ def calc_balance_totals(data: dict) -> dict:
     }
 
 
+def signed_income_amount(value) -> float:
+    """Income/revenue rows should contribute positively; keeps genuinely negative other results."""
+    return safe_float(value)
+
+
+def expense_amount(value) -> float:
+    """Expense/cost/tax/depreciation rows are treated as costs regardless of stored sign."""
+    return abs(safe_float(value))
+
+
 def calc_income_totals(data: dict) -> dict:
+    """
+    Income Statement subtotals aligned to the latest Excel template.
+
+    The app now displays expense rows as positive amounts. Therefore totals subtract
+    expense fields and add income fields explicitly, instead of relying on old
+    negative-value summing conventions.
+    """
     net_sales = safe_float(data.get("net_sales"))
-    gross_profit = net_sales + safe_float(data.get("state_grants")) + safe_float(data.get("cost_of_sales"))
-    ebit = gross_profit + (
-        safe_float(data.get("other_operating_income")) + safe_float(data.get("other_income"))
-        - safe_float(data.get("admin_expenses")) - safe_float(data.get("selling_expenses"))
-        - safe_float(data.get("other_operating_expenses")) - safe_float(data.get("other_expenses"))
+    state_grants = safe_float(data.get("state_grants"))
+    cost_of_sales = expense_amount(data.get("cost_of_sales"))
+
+    gross_profit = net_sales + state_grants - cost_of_sales
+
+    # Operating expenses
+    admin_expenses = expense_amount(data.get("admin_expenses"))
+    selling_expenses = expense_amount(data.get("selling_expenses"))
+    research_expenses = expense_amount(data.get("research_expenses"))
+    provisions_expenses = expense_amount(data.get("provisions_expenses"))
+    other_operating_expenses = expense_amount(data.get("other_operating_expenses"))
+    inventory_revaluation_losses = expense_amount(data.get("inventory_revaluation_losses"))
+    other_expenses = expense_amount(data.get("other_expenses"))
+
+    # Operating income
+    operating_income = safe_float(data.get("other_operating_income"))
+    inventory_revaluation_gains = safe_float(data.get("inventory_revaluation_gains"))
+    other_income = safe_float(data.get("other_income"))
+
+    ebit = (
+        gross_profit
+        + operating_income
+        + inventory_revaluation_gains
+        + other_income
+        - admin_expenses
+        - selling_expenses
+        - research_expenses
+        - provisions_expenses
+        - other_operating_expenses
+        - inventory_revaluation_losses
+        - other_expenses
     )
-    depreciation = safe_float(data.get("depr_tangible")) + safe_float(data.get("depr_intangible"))
+
+    depr_tangible = expense_amount(data.get("depr_tangible"))
+    depr_intangible = expense_amount(data.get("depr_intangible"))
+    depreciation = depr_tangible + depr_intangible
+
     ebitda = safe_float(data.get("ebitda_manual"))
-    pbt = ebit - safe_float(data.get("financial_expenses")) + safe_float(data.get("financial_income")) + safe_float(data.get("other_financial_results")) + safe_float(data.get("dividend_income"))
-    pat = pbt - safe_float(data.get("income_taxes"))
-    total_revenue_for_turnover = net_sales + safe_float(data.get("other_operating_income")) + safe_float(data.get("other_income"))
+
+    # Financial block: dividends/income/gains add; expenses/losses subtract.
+    dividend_income = safe_float(data.get("dividend_income"))
+    financial_expenses = expense_amount(data.get("financial_expenses"))
+    other_financial_losses = expense_amount(data.get("other_financial_losses"))
+    financial_income = safe_float(data.get("financial_income"))
+    other_financial_gains = safe_float(data.get("other_financial_gains"))
+
+    pbt = (
+        ebit
+        + dividend_income
+        + financial_income
+        + other_financial_gains
+        - financial_expenses
+        - other_financial_losses
+    )
+
+    # Taxes may be negative in the template, so keep their sign.
+    income_taxes = safe_float(data.get("income_taxes"))
+    pat = pbt - income_taxes
+
+    total_revenue_for_turnover = net_sales + operating_income
+
     return {
         "gross_profit": gross_profit,
         "ebit": ebit,
@@ -829,52 +975,64 @@ def calc_income_totals(data: dict) -> dict:
         "total_revenue_for_turnover": total_revenue_for_turnover,
     }
 
-
 def build_analysis(company: dict, year: int, balance: dict, income: dict, prev_balance: dict | None = None):
     bt = calc_balance_totals(balance)
     it = calc_income_totals(income)
     prev_bt = calc_balance_totals(prev_balance) if prev_balance else None
 
+    # Investment ratios 
     profit_margin = div(it["pat"], safe_float(income.get("net_sales")))
     asset_turnover = div(safe_float(income.get("net_sales")), bt["total_assets"])
     roa = None if profit_margin is None or asset_turnover is None else profit_margin * asset_turnover
     financial_leverage = div(bt["total_liabilities_equity"], bt["equity"])
     roe = None if roa is None or financial_leverage is None else roa * financial_leverage
 
+    # Liquidity ratios 
     current_ratio = div(bt["current_assets"], safe_float(balance.get("short_term_liabilities")))
     quick_ratio = div(bt["current_assets"] - safe_float(balance.get("inventory")), safe_float(balance.get("short_term_liabilities")))
 
     inventory_turnover = receivable_turnover = payable_turnover = operating_cycle = None
     inventory_days = receivable_days = payable_days = None
     fixed_asset_turnover = total_asset_turnover_2 = None
+
     working_capital_requirements = bt["current_assets"] - safe_float(balance.get("short_term_liabilities"))
 
-    if prev_bt:
+    if prev_balance:
         avg_inventory = (safe_float(balance.get("inventory")) + safe_float(prev_balance.get("inventory"))) / 2
         avg_receivables = (safe_float(balance.get("trade_receivables")) + safe_float(prev_balance.get("trade_receivables"))) / 2
         avg_payables = (safe_float(balance.get("short_term_liabilities")) + safe_float(prev_balance.get("short_term_liabilities"))) / 2
 
-        inventory_turnover = div(abs(safe_float(income.get("cost_of_sales"))), avg_inventory)
+        # The app stores / displays costs as positive amounts, but the template uses
+        # a leading minus in these turnover formulas.  Using -abs(...) makes the
+        # result stable even if an older database still contains negative expense rows.
+        cost_for_turnover = expense_amount(income.get("cost_of_sales"))
+        signed_cost_for_turnover = -cost_for_turnover
+
+        inventory_turnover = div(signed_cost_for_turnover, avg_inventory)
         inventory_days = div(365, inventory_turnover) if inventory_turnover not in (None, 0) else None
 
-        receivable_turnover = div(safe_float(income.get("net_sales")), avg_receivables)
+        receivable_turnover = div(signed_cost_for_turnover, avg_receivables)
         receivable_days = div(365, receivable_turnover) if receivable_turnover not in (None, 0) else None
 
-        payable_turnover = div(abs(safe_float(income.get("cost_of_sales"))), avg_payables)
+        inventory_change = safe_float(balance.get("inventory")) - safe_float(prev_balance.get("inventory"))
+        payable_turnover = div(-(cost_for_turnover + inventory_change), avg_payables)
         payable_days = div(365, payable_turnover) if payable_turnover not in (None, 0) else None
 
-        if inventory_days is not None and payable_days is not None and receivable_days is not None:
-            operating_cycle = inventory_days + receivable_days - payable_days
+        if payable_days is not None and receivable_days is not None:
+            operating_cycle = receivable_days - payable_days
 
-        avg_fixed_assets = (safe_float(prev_bt["non_current_assets"]) + safe_float(bt["non_current_assets"])) / 2
-        avg_total_assets = (safe_float(prev_bt["total_assets"]) + safe_float(bt["total_assets"])) / 2
-        fixed_asset_turnover = div(it["total_revenue_for_turnover"], avg_fixed_assets)
-        total_asset_turnover_2 = div(it["total_revenue_for_turnover"], avg_total_assets)
+        prev_bt_for_turnover = calc_balance_totals(prev_balance)
+        total_revenue_for_turnover = safe_float(income.get("net_sales")) + safe_float(income.get("other_operating_income"))
+        fixed_asset_turnover = div(total_revenue_for_turnover, prev_bt_for_turnover["non_current_assets"] - bt["non_current_assets"])
+        total_asset_turnover_2 = div(total_revenue_for_turnover, prev_bt_for_turnover["total_assets"] - bt["total_assets"])
+
+    # The updated template's EBIT in the indicators area is EBITDA - Depreciations.
+    indicator_ebit = it["ebitda"] - it["depreciation"]
 
     return {
         "company_name": company.get("name", ""),
         "year": year,
-        "totals": {**bt, **it, "working_capital_requirements": working_capital_requirements},
+        "totals": {**bt, **it, "working_capital_requirements": working_capital_requirements, "indicator_ebit": indicator_ebit},
         "ratios": {
             "Profit Margin (Περιθώριο Καθαρού Κέρδους)": profit_margin,
             "Asset Turnover (Κεφαλ. Παραγωγικ. Ενεργητικού)": asset_turnover,
@@ -893,12 +1051,11 @@ def build_analysis(company: dict, year: int, balance: dict, income: dict, prev_b
             "Working Capital Requirements (Ανάγκες σε Κ/Κ)": working_capital_requirements,
             "Fixed Asset Turnover (Κυκλοφορ. Ταχύτ. Πάγιου Ενεργητικού σε φορές)": fixed_asset_turnover,
             "Total Asset Turnover (Κυκλοφορ. Ταχύτ. Ενεργητικού σε φορές)": total_asset_turnover_2,
-            "EBIT": it["ebit"],
+            "EBIT": indicator_ebit,
             "EBITDA": it["ebitda"],
             "Depreciations (Αποσβέσεις Χρήσης)": it["depreciation"],
         },
     }
-
 
 def extract_years_from_balance_sheet(ws):
     years = {}
@@ -922,16 +1079,88 @@ def extract_years_from_income_sheet(ws):
     return years
 
 
+
+def clean_import_value(value):
+    """Import helper: workbook placeholder 0.001 values are treated as real zero."""
+    v = safe_float(value)
+    return 0.0 if abs(v) < 0.01 else v
+
+
+
+def _formula_cell_value(ws_values, ws_formulas, row: int, col: int):
+    """Return an import cell value, with fallback evaluation for simple formulas.
+
+    Some template input cells may contain formulas (for example =11584136+1959091).
+    When a workbook has not been recalculated by Excel, openpyxl(data_only=True)
+    may return None for those cells. This helper uses the formula text as a fallback
+    and evaluates only safe, simple arithmetic / SUM formulas needed by the import template.
+    """
+    value = ws_values.cell(row, col).value
+    if value not in (None, ""):
+        return value
+
+    formula = ws_formulas.cell(row, col).value
+    if not isinstance(formula, str) or not formula.startswith("="):
+        return value
+
+    expr = formula[1:].strip()
+    if not expr:
+        return value
+
+    import re
+
+    def cell_value(ref: str) -> float:
+        try:
+            v = ws_values[ref].value
+            if v in (None, ""):
+                raw = ws_formulas[ref].value
+                if isinstance(raw, str) and raw.startswith("="):
+                    return float(_formula_cell_value(ws_values, ws_formulas, ws_formulas[ref].row, ws_formulas[ref].column) or 0)
+                v = raw
+            return safe_float(v)
+        except Exception:
+            return 0.0
+
+    def eval_sum(match):
+        range_text = match.group(1)
+        total = 0.0
+        try:
+            for row_cells in ws_formulas[range_text]:
+                for c in row_cells:
+                    total += cell_value(c.coordinate)
+        except Exception:
+            return "0"
+        return str(total)
+
+    expr = re.sub(r"SUM\(([^)]+)\)", eval_sum, expr, flags=re.IGNORECASE)
+
+    # Replace remaining cell references, e.g. B3 or $B$3.
+    expr = re.sub(r"\$?([A-Z]{1,3})\$?(\d+)", lambda m: str(cell_value(f"{m.group(1)}{m.group(2)}")), expr)
+
+    # Evaluate only plain numeric arithmetic.
+    if not re.fullmatch(r"[0-9\.\,\+\-\*/\(\)\s]+", expr):
+        return value
+    try:
+        return eval(expr.replace(",", "."), {"__builtins__": {}}, {})
+    except Exception:
+        return value
+
 def parse_excel_template(file_path: str):
     if not OPENPYXL_OK:
         raise RuntimeError("Η βιβλιοθήκη openpyxl δεν είναι εγκατεστημένη.")
-    wb = openpyxl.load_workbook(file_path, data_only=True)
+
+    # Open twice: values for normal imports, formulas as fallback when Excel has not cached formula results.
+    wb_values = openpyxl.load_workbook(file_path, data_only=True)
+    wb_formulas = openpyxl.load_workbook(file_path, data_only=False)
+
     required = {"Κατάσταση Οικονομικής Θέσης", "Κατάσταση Συνολικού Εισοδήματος"}
-    if not required.issubset(set(wb.sheetnames)):
+    if not required.issubset(set(wb_values.sheetnames)):
         raise RuntimeError("Το αρχείο Excel δεν έχει τα απαιτούμενα sheets import.")
 
-    balance_ws = wb["Κατάσταση Οικονομικής Θέσης"]
-    income_ws = wb["Κατάσταση Συνολικού Εισοδήματος"]
+    balance_ws = wb_values["Κατάσταση Οικονομικής Θέσης"]
+    income_ws = wb_values["Κατάσταση Συνολικού Εισοδήματος"]
+    balance_ws_f = wb_formulas["Κατάσταση Οικονομικής Θέσης"]
+    income_ws_f = wb_formulas["Κατάσταση Συνολικού Εισοδήματος"]
 
     balance_years = extract_years_from_balance_sheet(balance_ws)
     income_years = extract_years_from_income_sheet(income_ws)
@@ -940,14 +1169,63 @@ def parse_excel_template(file_path: str):
     for col, year in balance_years.items():
         parsed.setdefault(year, {"balance": {}, "income": {}})
         for row, key in BALANCE_IMPORT_MAP.items():
-            parsed[year]["balance"][key] = safe_float(balance_ws.cell(row, col).value)
+            value = _formula_cell_value(balance_ws, balance_ws_f, row, col)
+            parsed[year]["balance"][key] = clean_import_value(value)
+
+    expense_like = {
+        "cost_of_sales", "admin_expenses", "selling_expenses", "research_expenses",
+        "provisions_expenses", "other_operating_expenses", "inventory_revaluation_losses",
+        "other_expenses", "depr_tangible", "depr_intangible", "financial_expenses",
+        "other_financial_losses"
+    }
 
     for col, year in income_years.items():
         parsed.setdefault(year, {"balance": {}, "income": {}})
         for row, key in INCOME_IMPORT_MAP.items():
-            parsed[year]["income"][key] = safe_float(income_ws.cell(row, col).value)
+            value = clean_import_value(_formula_cell_value(income_ws, income_ws_f, row, col))
+            if key in expense_like:
+                value = abs(value)
+            parsed[year]["income"][key] = value
 
     return {year: values for year, values in parsed.items() if values["balance"] or values["income"]}
+
+
+
+def apply_template_third_year_adjustment(analyses: list[dict], company: dict, db: SQLiteDB) -> list[dict]:
+    """Match the latest CorrectCalcs.xlsx report layout for the oldest displayed year.
+
+    The report shows the latest 3 years. In the reference workbook, the 3rd displayed
+    year uses the previous balance-sheet column for several investment / liquidity
+    ratios (while the income statement remains the 3rd-year income statement).
+    This fixes the wrong 3rd-column values seen in the PDF export.
+    """
+    if len(analyses) < 3:
+        return analyses
+    oldest = analyses[2]
+    year = int(oldest.get("year"))
+    prev_balance = db.get_sheet("balance_sheets", company["id"], year - 1)
+    income = db.get_sheet("income_sheets", company["id"], year)
+    if not prev_balance or not income:
+        return analyses
+
+    bt_prev = calc_balance_totals(prev_balance)
+    it = oldest.get("totals", {})
+    net_sales = safe_float(income.get("net_sales"))
+
+    profit_margin = div(it.get("pat"), net_sales)
+    asset_turnover = div(net_sales, bt_prev["total_assets"])
+    roa = None if profit_margin is None or asset_turnover is None else profit_margin * asset_turnover
+    financial_leverage = div(bt_prev["total_liabilities_equity"], bt_prev["equity"])
+    roe = None if roa is None or financial_leverage is None else roa * financial_leverage
+
+    ratios = oldest["ratios"]
+    ratios["Profit Margin (Περιθώριο Καθαρού Κέρδους)"] = profit_margin
+    ratios["Asset Turnover (Κεφαλ. Παραγωγικ. Ενεργητικού)"] = asset_turnover
+    ratios["ROA (Απόδοση Συνόλου Ενεργητικού)"] = roa
+    ratios["Financial Leverage (Χρημ/ική Μόχλευση)"] = financial_leverage
+    ratios["ROE (Απόδοση Ι/Κ)"] = roe
+    ratios["Current Ratio (Κεφ./Κίνησης)"] = div(bt_prev["current_assets"], safe_float(prev_balance.get("short_term_liabilities")))
+    return analyses
 
 
 class CompanyTab(ttk.Frame):
@@ -1340,6 +1618,8 @@ class IncomeSheetTab(BaseStatementTab):
         for kind, label, key in INCOME_LAYOUT:
             if kind == "space":
                 ttk.Label(inner, text="").grid(row=row, column=0, columnspan=2, pady=4)
+            elif kind == "header":
+                ttk.Label(inner, text=label, font=("Segoe UI", 11, "bold")).grid(row=row, column=0, columnspan=2, sticky="ew", padx=(8, 8), pady=(8, 4))
             elif kind in {"field", "field_bold"}:
                 font = ("Segoe UI", 10, "bold") if kind == "field_bold" else None
                 ttk.Label(inner, text=label, font=font, wraplength=500, justify="left").grid(row=row, column=0, sticky="w", padx=(8, 8), pady=3)
@@ -1371,8 +1651,17 @@ class IncomeSheetTab(BaseStatementTab):
         self.update_auto_fields()
 
     def populate_fields(self, row):
+        expense_like = {
+            "cost_of_sales", "admin_expenses", "selling_expenses", "research_expenses",
+            "provisions_expenses", "other_operating_expenses", "inventory_revaluation_losses",
+            "other_expenses", "depr_tangible", "depr_intangible", "financial_expenses",
+            "other_financial_losses"
+        }
         for k in self.input_vars:
-            self.input_vars[k].set("" if abs(safe_float(row.get(k))) < 0.0000001 else format_thousands_dot(row.get(k, "")))
+            value = safe_float(row.get(k))
+            if k in expense_like:
+                value = abs(value)
+            self.input_vars[k].set("" if abs(value) < 0.0000001 else format_thousands_dot(value))
         self.comments_text.delete("1.0", "end")
         self.comments_text.insert("1.0", row.get("comments", ""))
         self.update_auto_fields()
@@ -1381,6 +1670,14 @@ class IncomeSheetTab(BaseStatementTab):
         if abs(safe_float(self.input_vars["ebitda_manual"].get())) < 0.0000001:
             raise RuntimeError("Το πεδίο EBITDA πρέπει να συμπληρώνεται από τον χρήστη.")
         payload = {k: safe_float(v.get()) for k, v in self.input_vars.items()}
+        # v5.3: store expense/cost/depreciation/loss rows as positive values, like the Excel template.
+        for k in {
+            "cost_of_sales", "admin_expenses", "selling_expenses", "research_expenses",
+            "provisions_expenses", "other_operating_expenses", "inventory_revaluation_losses",
+            "other_expenses", "depr_tangible", "depr_intangible", "financial_expenses",
+            "other_financial_losses"
+        }:
+            payload[k] = abs(payload.get(k, 0.0))
         payload["comments"] = self.comments_text.get("1.0", "end").strip()
         return payload
 
@@ -1390,6 +1687,66 @@ class IncomeSheetTab(BaseStatementTab):
         except Exception as e:
             messagebox.showerror(APP_TITLE, str(e))
 
+
+
+def append_statement_sheet_to_workbook(wb, title: str, company: dict, years: list[int], db: SQLiteDB, statement: str):
+    """Append Ισολογισμός / Αποτελέσματα Χρήσης records to the report XLSX."""
+    ws = wb.create_sheet(title)
+    ws.append(["Εταιρεία", company.get("name", "")])
+    ws.append(["ΑΦΜ", company.get("afm", "")])
+    ws.append(["ΓΕΜΗ", company.get("gemi", "")])
+    ws.append([])
+
+    if statement == "balance":
+        table_name = "balance_sheets"
+        layout = BALANCE_LAYOUT
+        total_func = calc_balance_totals
+    else:
+        table_name = "income_sheets"
+        layout = INCOME_LAYOUT
+        total_func = calc_income_totals
+
+    sheets = {year: db.get_sheet(table_name, company["id"], year) or {} for year in years}
+    totals = {year: total_func(sheets[year]) for year in years}
+
+    header_row = ws.max_row + 1
+    ws.append(["Κονδύλι"] + years)
+    style_excel_header(ws, header_row, "D9E2F3")
+    group_rows = []
+
+    for kind, label, key in layout:
+        if kind == "space":
+            ws.append([""] + [None] * len(years))
+            continue
+        if kind == "header":
+            ws.append([label] + [""] * len(years))
+            group_rows.append(ws.max_row)
+            continue
+        if kind in {"field", "diff", "field_bold"}:
+            row = [label]
+            for year in years:
+                row.append(safe_float(sheets[year].get(key)))
+            ws.append(row)
+            continue
+        if kind in {"auto", "auto_header"}:
+            row = [label]
+            for year in years:
+                row.append(totals[year].get(key))
+            ws.append(row)
+            group_rows.append(ws.max_row)
+            continue
+
+    for r in range(header_row + 1, ws.max_row + 1):
+        ws.cell(r, 1).alignment = openpyxl.styles.Alignment(wrap_text=True, vertical="top")
+        for c in range(2, 2 + len(years)):
+            ws.cell(r, c).number_format = '#,##0.00'
+    for r in group_rows:
+        for c in range(1, ws.max_column + 1):
+            cell = ws.cell(r, c)
+            cell.font = openpyxl.styles.Font(bold=True)
+            cell.fill = openpyxl.styles.PatternFill("solid", fgColor="E2F0D9")
+    ws.freeze_panes = f"B{header_row + 1}"
+    autosize_worksheet(ws, min_width=12, max_width=45)
 
 class AnalysisTab(ttk.Frame):
     def __init__(self, master, app):
@@ -1469,6 +1826,7 @@ class AnalysisTab(ttk.Frame):
                 continue
             prev_bs = self.app.db.get_sheet("balance_sheets", company_id, year - 1)
             analyses.append(build_analysis(company, year, bs, inc, prev_bs if prev_bs else None))
+        analyses = apply_template_third_year_adjustment(analyses, company, self.app.db)
         return company, years, analyses
 
     def run_analysis(self):
@@ -1485,7 +1843,7 @@ class AnalysisTab(ttk.Frame):
 
         self.current_company = company
         self.current_report_rows = analyses
-        visible_years = [a["year"] for a in analyses[:4]]
+        visible_years = [a["year"] for a in analyses[:3]]
         for i, col in enumerate(["y1", "y2", "y3", "y4"]):
             self.tree.heading(col, text=str(visible_years[i]) if i < len(visible_years) else "-")
 
@@ -1499,12 +1857,9 @@ class AnalysisTab(ttk.Frame):
                 continue
             ratio_name = label
             row = [ratio_name]
-            for analysis in analyses[:4]:
+            for analysis in analyses[:3]:
                 val = analysis["ratios"].get(ratio_name)
-                if ratio_name in {"EBIT", "EBITDA", "Depreciations (Αποσβέσεις Χρήσης)", "Working Capital Requirements (Ανάγκες σε Κ/Κ)"} or "Days" in ratio_name:
-                    row.append(fmt_num(val) if val is not None else "-")
-                else:
-                    row.append(fmt_pct(val) if val is not None and abs(val) < 10 else fmt_num(val) if val is not None else "-")
+                row.append(format_ratio_display(ratio_name, val))
             while len(row) < 5:
                 row.append("")
             self.tree.insert("", "end", iid=ratio_name, values=row)
@@ -1549,18 +1904,21 @@ class AnalysisTab(ttk.Frame):
     def _pdf_footer(self, canvas, doc):
         canvas.saveState()
         font_regular, _ = register_pdf_fonts()
-        canvas.setFont("Helvetica", 7)
-        canvas.drawCentredString(A4[0] / 2, 1 * cm, "CORP Valuation app by G.Tsakalos")
+        page_width, page_height = canvas._pagesize
+        canvas.setFont(font_regular, 6)
+        canvas.setFillColor(colors.grey)
+        canvas.drawCentredString(page_width / 2, 0.65 * cm, "CORP Valuation app by G.Tsakalos")
         canvas.restoreState()
 
-    def _make_pdf_chart(self, title, years, values, width=17.5 * cm, height=6.2 * cm):
+    def _make_pdf_chart(self, title, years, values, width=17.5 * cm, height=6.2 * cm, value_format="number"):
         drawing = Drawing(width, height)
-        drawing.add(String(10, height - 14, title, fontName=register_pdf_fonts()[1], fontSize=12))
+        font_regular, font_bold = register_pdf_fonts()
+        drawing.add(String(10, height - 14, title, fontName=font_bold, fontSize=12))
         chart = HorizontalLineChart()
-        chart.x = 45
+        chart.x = 60
         chart.y = 35
         chart.height = height - 70
-        chart.width = width - 70
+        chart.width = width - 95
         safe_values = [0 if v is None else round(float(v), 2) for v in values]
         chart.data = [safe_values]
         chart.categoryAxis.categoryNames = [str(y) for y in years]
@@ -1579,7 +1937,12 @@ class AnalysisTab(ttk.Frame):
         chart.valueAxis.valueMin = min_val - pad
         chart.valueAxis.valueMax = max_val + pad
         chart.valueAxis.valueStep = max((chart.valueAxis.valueMax - chart.valueAxis.valueMin) / 5.0, 1)
-        chart.valueAxis.labelTextFormat = "%.2f"
+        if value_format == "percent":
+            chart.valueAxis.labelTextFormat = lambda v: f"{v:.2f}%"
+        elif value_format == "integer_thousands":
+            chart.valueAxis.labelTextFormat = lambda v: format_thousands_dot(round(v))
+        else:
+            chart.valueAxis.labelTextFormat = "%.2f"
         drawing.add(chart)
         return drawing
 
@@ -1590,15 +1953,35 @@ class AnalysisTab(ttk.Frame):
         font_regular, font_bold = register_pdf_fonts()
         styles = getSampleStyleSheet()
         styles["Title"].fontName = font_bold
-        styles["Title"].fontSize = 18
+        styles["Title"].fontSize = 16
         styles["Heading3"].fontName = font_bold
         styles["Heading3"].fontSize = 11
         styles["Normal"].fontName = font_regular
-        styles["Normal"].fontSize = 9.5
-        styles.add(ParagraphStyle(name="GreekSmall", fontName=font_regular, fontSize=7.5, leading=9))
-        doc = SimpleDocTemplate(output_path, pagesize=A4, rightMargin=1.0 * cm, leftMargin=1.0 * cm, topMargin=1.2 * cm, bottomMargin=1.3 * cm)
-        story = []
+        styles["Normal"].fontSize = 9
+        styles.add(ParagraphStyle(name="GreekSmall", fontName=font_regular, fontSize=7.2, leading=8.6))
+        styles.add(ParagraphStyle(name="GreekSmallBold", fontName=font_bold, fontSize=7.4, leading=8.8))
 
+        landscape_size = landscape(A4)
+        portrait_size = A4
+        doc = BaseDocTemplate(output_path, pagesize=landscape_size,
+                              rightMargin=0.8 * cm, leftMargin=0.8 * cm,
+                              topMargin=1.0 * cm, bottomMargin=1.1 * cm)
+
+        landscape_frame = Frame(doc.leftMargin, doc.bottomMargin,
+                                landscape_size[0] - doc.leftMargin - doc.rightMargin,
+                                landscape_size[1] - doc.topMargin - doc.bottomMargin,
+                                id="landscape_frame")
+        portrait_frame = Frame(doc.leftMargin, doc.bottomMargin,
+                               portrait_size[0] - doc.leftMargin - doc.rightMargin,
+                               portrait_size[1] - doc.topMargin - doc.bottomMargin,
+                               id="portrait_frame")
+
+        doc.addPageTemplates([
+            PageTemplate(id="landscape_report", pagesize=landscape_size, frames=[landscape_frame], onPage=self._pdf_footer),
+            PageTemplate(id="portrait_charts", pagesize=portrait_size, frames=[portrait_frame], onPage=self._pdf_footer),
+        ])
+
+        story = []
         companies = self.app.db.all_companies_with_data() if multi_company else ([self.current_company] if self.current_company else [])
         if not companies:
             raise RuntimeError("Δεν υπάρχουν αναφορές για εξαγωγή.")
@@ -1608,67 +1991,84 @@ class AnalysisTab(ttk.Frame):
             _, _, analyses = self.collect_company_analysis(company["id"])
             if not analyses:
                 continue
+
             if not first_company:
+                story.append(NextPageTemplate("landscape_report"))
                 story.append(PageBreak())
             first_company = False
+
             story.append(Paragraph(company.get("name", ""), styles["Title"]))
-            story.append(Spacer(1, 0.12 * cm))
+            story.append(Spacer(1, 0.10 * cm))
             story.append(Paragraph(f"ΑΦΜ: {company.get('afm','')} | ΓΕΜΗ: {company.get('gemi','')}", styles["Normal"]))
-            story.append(Spacer(1, 0.25 * cm))
-            years = [a["year"] for a in analyses[:4]]
+            story.append(Spacer(1, 0.20 * cm))
+
+            years = [a["year"] for a in analyses[:3]]
             header = ["Δείκτης"] + [str(y) for y in years] + ["Σημείωση"]
             data = [header]
+            group_rows = []
             for item_type, label in iter_grouped_ratios():
                 if item_type == "__GROUP__":
-                    group_row = [Paragraph(f"<b>{label}</b>", styles["GreekSmall"])] + [""] * len(years) + [""]
-                    data.append(group_row)
+                    group_rows.append(len(data))
+                    data.append([Paragraph(f"<b>{label}</b>", styles["GreekSmallBold"])] + [""] * len(years) + [""])
                     continue
                 ratio_name = label
                 row = [Paragraph(ratio_name, styles["GreekSmall"])]
-                for analysis in analyses[:4]:
+                for analysis in analyses[:3]:
                     val = analysis["ratios"].get(ratio_name)
-                    if ratio_name in {"EBIT", "EBITDA", "Depreciations (Αποσβέσεις Χρήσης)", "Working Capital Requirements (Ανάγκες σε Κ/Κ)"} or "Days" in ratio_name:
-                        shown = fmt_num(val) if val is not None else "-"
-                    else:
-                        shown = fmt_pct(val) if val is not None and abs(val) < 10 else fmt_num(val) if val is not None else "-"
-                    row.append(shown)
+                    row.append(format_ratio_display(ratio_name, val))
                 while len(row) < 1 + len(years):
                     row.append("")
                 note = self.app.db.get_ratio_note(company["id"], ratio_name)
                 row.append(Paragraph(note or "", styles["GreekSmall"]))
                 data.append(row)
-            col_widths = [6.8 * cm] + [1.8 * cm for _ in years] + [4.5 * cm]
+
+            usable_width = landscape_size[0] - doc.leftMargin - doc.rightMargin
+            n_years = max(len(years), 1)
+            first_col = 9.0 * cm
+            note_col = 5.4 * cm
+            year_col = (usable_width - first_col - note_col) / n_years
+            col_widths = [first_col] + [year_col for _ in years] + [note_col]
+
             table = Table(data, colWidths=col_widths, repeatRows=1)
-            table.setStyle(TableStyle([
+            style_cmds = [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#d9e2f3")),
-                ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+                ("GRID", (0, 0), (-1, -1), 0.35, colors.grey),
                 ("FONTNAME", (0, 0), (-1, 0), font_bold),
                 ("FONTNAME", (0, 1), (-1, -1), font_regular),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("FONTSIZE", (0, 0), (-1, -1), 7.5),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-                ("TOPPADDING", (0, 0), (-1, -1), 4),
-                ("LEADING", (0, 0), (-1, -1), 10),
-            ]))
+                ("ALIGN", (1, 1), (-2, -1), "RIGHT"),
+                ("FONTSIZE", (0, 0), (-1, -1), 7.2),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("LEADING", (0, 0), (-1, -1), 8.6),
+            ]
+            for r in group_rows:
+                style_cmds.extend([
+                    ("BACKGROUND", (0, r), (-1, r), colors.HexColor("#e2f0d9")),
+                    ("FONTNAME", (0, r), (-1, r), font_bold),
+                    ("SPAN", (0, r), (-1, r)),
+                ])
+            table.setStyle(TableStyle(style_cmds))
             story.append(table)
 
-            chart_years = [a["year"] for a in reversed(analyses)]
+            chart_years = [a["year"] for a in reversed(analyses[:3])]
             if chart_years:
+                story.append(NextPageTemplate("portrait_charts"))
                 story.append(PageBreak())
                 story.append(Paragraph(f"{company.get('name', '')} - Charts", styles["Heading3"]))
                 story.append(Spacer(1, 0.15 * cm))
-                metric_map = {
-                    "EBIT": [a["ratios"].get("EBIT") for a in reversed(analyses)],
-                    "ROA": [None if a["ratios"].get("ROA (Απόδοση Συνόλου Ενεργητικού)") is None else a["ratios"].get("ROA (Απόδοση Συνόλου Ενεργητικού)") * 100 for a in reversed(analyses)],
-                    "ROE": [None if a["ratios"].get("ROE (Απόδοση Ι/Κ)") is None else a["ratios"].get("ROE (Απόδοση Ι/Κ)") * 100 for a in reversed(analyses)],
-                }
-                for idx, (title, values) in enumerate(metric_map.items()):
-                    drawing = self._make_pdf_chart(title, chart_years, values)
+                metric_map = [
+                    ("EBIT", [a["ratios"].get("EBIT") for a in reversed(analyses[:3])], "integer_thousands"),
+                    ("ROA", [None if a["ratios"].get("ROA (Απόδοση Συνόλου Ενεργητικού)") is None else a["ratios"].get("ROA (Απόδοση Συνόλου Ενεργητικού)") * 100 for a in reversed(analyses[:3])], "percent"),
+                    ("ROE", [None if a["ratios"].get("ROE (Απόδοση Ι/Κ)") is None else a["ratios"].get("ROE (Απόδοση Ι/Κ)") * 100 for a in reversed(analyses[:3])], "percent"),
+                ]
+                for idx, (title, values, value_format) in enumerate(metric_map):
+                    drawing = self._make_pdf_chart(title, chart_years, values, value_format=value_format)
                     story.append(drawing)
                     if idx < 2:
                         story.append(Spacer(1, 0.2 * cm))
 
-        doc.build(story, onFirstPage=self._pdf_footer, onLaterPages=self._pdf_footer)
+        doc.build(story)
 
     def export_pdf(self):
         if not self.current_report_rows:
@@ -1702,7 +2102,7 @@ class AnalysisTab(ttk.Frame):
             ws = wb.active
             ws.title = "Ratios"
 
-            years = [a["year"] for a in self.current_report_rows[:4]]
+            years = [a["year"] for a in self.current_report_rows[:3]]
             company_name = self.current_company.get("name", "") if self.current_company else ""
             ws.append(["Εταιρεία", company_name])
             ws.append(["ΑΦΜ", self.current_company.get("afm", "") if self.current_company else ""])
@@ -1712,18 +2112,7 @@ class AnalysisTab(ttk.Frame):
             ws.append(["Δείκτης"] + years + ["Σημείωση"])
             style_excel_header(ws, header_row)
 
-            percent_ratios = {
-                "Profit Margin (Περιθώριο Καθαρού Κέρδους)",
-                "Asset Turnover (Κεφαλ. Παραγωγικ. Ενεργητικού)",
-                "ROA (Απόδοση Συνόλου Ενεργητικού)",
-                "Financial Leverage (Χρημ/ική Μόχλευση)",
-                "ROE (Απόδοση Ι/Κ)",
-                "Current Ratio (Κεφ./Κίνησης)",
-                "Quick Ratio (Ρευστότητας)",
-                "Receivable Turnover Ratio (Κυκλοφορ. Ταχύτ. Απαιτήσεων σε φορές)",
-                "Fixed Asset Turnover (Κυκλοφορ. Ταχύτ. Πάγιου Ενεργητικού σε φορές)",
-                "Total Asset Turnover (Κυκλοφορ. Ταχύτ. Ενεργητικού σε φορές)",
-            }
+            percent_ratios = PERCENT_RATIOS
 
             group_heading_rows = []
             for item_type, label in iter_grouped_ratios():
@@ -1733,7 +2122,7 @@ class AnalysisTab(ttk.Frame):
                     continue
                 ratio_name = label
                 row = [ratio_name]
-                for analysis in self.current_report_rows[:4]:
+                for analysis in self.current_report_rows[:3]:
                     row.append(analysis["ratios"].get(ratio_name))
                 while len(row) < 1 + len(years):
                     row.append(None)
@@ -1747,6 +2136,8 @@ class AnalysisTab(ttk.Frame):
                     cell = ws.cell(r, c)
                     if ratio_name in percent_ratios and cell.value is not None:
                         cell.number_format = '0.00%'
+                    elif ratio_name in DECIMAL4_RATIOS and cell.value is not None:
+                        cell.number_format = '#,##0.0000'
                     else:
                         cell.number_format = '#,##0.00'
                 ws.cell(r, 1).alignment = openpyxl.styles.Alignment(wrap_text=True, vertical='top')
@@ -1764,7 +2155,7 @@ class AnalysisTab(ttk.Frame):
             totals_ws = wb.create_sheet("Totals")
             totals_ws.append(["Έτος", "EBIT", "EBITDA", "Depreciations (Αποσβέσεις Χρήσης)", "Working Capital Requirements (Ανάγκες σε Κ/Κ)"])
             style_excel_header(totals_ws, 1, "E2F0D9")
-            for analysis in self.current_report_rows[:4]:
+            for analysis in self.current_report_rows[:3]:
                 totals_ws.append([
                     analysis["year"],
                     analysis["ratios"].get("EBIT"),
@@ -1777,7 +2168,13 @@ class AnalysisTab(ttk.Frame):
                     cell.number_format = '#,##0.00'
             autosize_worksheet(totals_ws)
 
-            add_report_charts_sheet(wb, self.current_report_rows[:4])
+            add_report_charts_sheet(wb, self.current_report_rows[:3])
+
+            export_years = [a["year"] for a in self.current_report_rows[:3]]
+            if self.current_company:
+                append_statement_sheet_to_workbook(wb, "Ισολογισμός", self.current_company, export_years, self.app.db, "balance")
+                append_statement_sheet_to_workbook(wb, "Αποτελέσματα Χρήσης", self.current_company, export_years, self.app.db, "income")
+
             wb.save(path)
             messagebox.showinfo(APP_TITLE, f"Το αρχείο XLSX δημιουργήθηκε:\n{path}")
         except Exception as e:
@@ -1855,9 +2252,7 @@ class CompareTab(ttk.Frame):
     def _format_compare_value(self, ratio_name, val):
         if val is None:
             return "-"
-        if ratio_name in {"EBIT", "EBITDA", "Depreciations (Αποσβέσεις Χρήσης)", "Working Capital Requirements (Ανάγκες σε Κ/Κ)"} or "Days" in ratio_name:
-            return fmt_num(val)
-        return fmt_pct(val) if abs(val) < 10 else fmt_num(val)
+        return format_ratio_display(ratio_name, val)
 
     def run_compare(self):
         year_text = self.year_var.get().strip()
@@ -1927,18 +2322,7 @@ class CompareTab(ttk.Frame):
             ws.append(["Επωνυμία"] + RATIO_ORDER)
             style_excel_header(ws, header_row)
 
-            percent_ratios = {
-                "Profit Margin (Περιθώριο Καθαρού Κέρδους)",
-                "Asset Turnover (Κεφαλ. Παραγωγικ. Ενεργητικού)",
-                "ROA (Απόδοση Συνόλου Ενεργητικού)",
-                "Financial Leverage (Χρημ/ική Μόχλευση)",
-                "ROE (Απόδοση Ι/Κ)",
-                "Current Ratio (Κεφ./Κίνησης)",
-                "Quick Ratio (Ρευστότητας)",
-                "Receivable Turnover Ratio (Κυκλοφορ. Ταχύτ. Απαιτήσεων σε φορές)",
-                "Fixed Asset Turnover (Κυκλοφορ. Ταχύτ. Πάγιου Ενεργητικού σε φορές)",
-                "Total Asset Turnover (Κυκλοφορ. Ταχύτ. Ενεργητικού σε φορές)",
-            }
+            percent_ratios = PERCENT_RATIOS
 
             for row in self.current_rows:
                 ws.append([row.get("company", "")] + [row.get(r) for r in RATIO_ORDER])
@@ -1948,6 +2332,8 @@ class CompareTab(ttk.Frame):
                     cell = ws.cell(r, idx)
                     if ratio_name in percent_ratios and cell.value is not None:
                         cell.number_format = '0.00%'
+                    elif ratio_name in DECIMAL4_RATIOS and cell.value is not None:
+                        cell.number_format = '#,##0.0000'
                     else:
                         cell.number_format = '#,##0.00'
 

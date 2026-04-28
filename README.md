@@ -1,72 +1,514 @@
-# CORP Valuation app v4.6 by G. Tsakalos
+# CORP Valuation app v5.7  
+**by G. Tsakalos**
 
 Desktop εφαρμογή σε **Python / Tkinter / SQLite** για αποτίμηση επιχειρήσεων, εισαγωγή οικονομικών δεδομένων, υπολογισμό χρηματοοικονομικών δεικτών, σύγκριση εταιρειών και εξαγωγή αναφορών.
 
 ---
 
-## 🔄 Τι νέο υπάρχει από v4.1
+## 🚀 Νέα στη v5.7
 
-Σε σχέση με την έκδοση v4.1, η v4.6 περιλαμβάνει:
-
-### UI / UX Improvements
-- ✔ Μορφοποίηση αριθμών με διαχωριστικά χιλιάδων (.)
-- ✔ Smart input behavior (focus/blur formatting)
-- ✔ Βελτιωμένο scrolling
-- ✔ Καλύτερο layout
-
-### Data Handling
-- ✔ Βελτιωμένος parser αριθμών
-- ✔ Ασφαλής μετατροπή σε float
-- ✔ Consistent formatting σε UI και exports
-
-### Reports & Export
-- ✔ XLSX formatting
-- ✔ PDF reports με charts
-- ✔ Sheet 'Charts' στο Excel
-
-### Νέα Features
-- ✔ Compare tab
-- ✔ Notes ανά δείκτη
-- ✔ Multi-company PDF export
-- ✔ Excel import
-- ✔ URL buttons
-- ✔ Config file support
+- Νέος μηχανισμός **Excel Import (formula-safe)**
+  - Διαβάζει σωστά και κελιά με τύπους / formulas, π.χ. `=A1+B1`
+- Διορθωμένοι υπολογισμοί δεικτών σύμφωνα με το νεότερο Excel template
+- Fix στα αποτελέσματα **3ου έτους**
+- **Asset Turnover** με **4 δεκαδικά**
+- Σωστή διαχείριση εξόδων ως **θετικών ποσών**
+- XLSX export πλήρες:
+  - `Ratios`
+  - `Totals`
+  - `Charts`
+  - `Ισολογισμός`
+  - `Αποτελέσματα Χρήσης`
+- PDF export:
+  - index page σε landscape
+  - charts page σε portrait
+  - σωστά formats για ποσοστά, δεκαδικά και χιλιάδες
 
 ---
 
-## 📊 Βασικά χαρακτηριστικά
+## 🧱 Αρχιτεκτονική
 
-- Διαχείριση εταιρειών
-- Ισολογισμός
-- Αποτελέσματα Χρήσης
-- Δείκτες
-- Compare
-- Export PDF / XLSX
-- SQLite βάση
+Η εφαρμογή βασίζεται στα εξής:
+
+- **Frontend / GUI**: Tkinter
+- **Database**: SQLite
+- **Excel Import / Export**: openpyxl
+- **PDF Reports**: reportlab
+- **Settings**: `app.cfg`
 
 ---
 
-## 📂 Αρχεία έργου
+## 📁 Δομή Project
 
-- app.py
-- app.cfg
-- madka_values.sqlite
-- requirements.txt
-- IndexMap.jpg
+```text
+/CORPAnalyzer/
+│
+├── app57.py
+├── app.cfg
+├── corp_values.sqlite
+├── requirements.txt
+├── IndexMap.jpg
+└── README.md
+```
+
+### Περιγραφή αρχείων
+
+- `app57.py`: κύριο αρχείο εφαρμογής
+- `app.cfg`: αρχείο ρυθμίσεων
+- `corp_values.sqlite`: προεπιλεγμένη SQLite βάση
+- `requirements.txt`: Python dependencies
+- `IndexMap.jpg`: διάγραμμα δεικτών που ανοίγει από το menu
+- `README.md`: οδηγίες χρήσης και τεχνική περιγραφή
+
+---
+
+## 🧭 Tabs εφαρμογής
+
+---
+
+## 1. Companies
+
+Το πρώτο tab χρησιμοποιείται για καταχώριση και διαχείριση εταιρειών.
+
+### Πεδία εταιρείας
+
+- Επωνυμία
+- ΑΦΜ
+- ΓΕΜΗ Αρ.
+- ΓΕΜΗ URL
+- URL εταιρείας
+- Σημειώσεις
+
+### Διαθέσιμες ενέργειες
+
+- `New`
+- `Save`
+- `Edit selected`
+- `Delete`
+- `Search`
+- `Import Excel`
+- `Open` για τα URL πεδία
+
+### Αναζήτηση
+
+Η αναζήτηση γίνεται σε:
+
+- Επωνυμία
+- ΑΦΜ
+- ΓΕΜΗ
+
+### Excel Import
+
+Από αυτό το tab γίνεται import του Excel template.  
+Ο χρήστης επιλέγει υπάρχουσα εταιρεία ή δημιουργεί νέα εγγραφή.
+
+---
+
+## 2. Ισολογισμός
+
+Το δεύτερο tab χρησιμοποιείται για καταχώριση Balance Sheet ανά:
+
+- εταιρεία
+- έτος
+
+### Περιλαμβάνει
+
+#### Ενεργητικό
+
+- Ενσώματα πάγια
+- Άυλα περιουσιακά στοιχεία
+- Επενδύσεις σε θυγατρικές επιχειρήσεις
+- Επενδύσεις σε λοιπές εταιρείες
+- Δικαιώματα χρήσης
+- Επενδύσεις σε ακίνητα
+- Λοιπές μακροπρόθεσμες απαιτήσεις
+- Διάφορα Μη-κυκλοφορούντα
+- Μη-κυκλοφορούν Ενεργητικό, auto total
+
+#### Κυκλοφορούν Ενεργητικό
+
+- Αποθέματα
+- Απαιτήσεις από πελάτες και λοιπές εμπορικές απαιτήσεις
+- Λοιπές βραχυπρόθεσμες απαιτήσεις
+- Λοιποί λογαριασμοί ενεργητικού
+- Ταμειακά διαθέσιμα και ισοδύναμα
+- Διάφορα Κυκλοφορούντα
+- Κυκλοφορούν Ενεργητικό, auto total
+
+#### Παθητικό
+
+- Μετοχικό Κεφάλαιο
+- Διαφορά υπέρ το άρτιο
+- Αποθεματικά κεφάλαια
+- Αποτελέσματα εις νέο
+- Διάφορα Ι/Κ
+- Ίδια Κεφάλαια, auto total
+- Μακροπρόθεσμες υποχρεώσεις
+- Βραχυπρόθεσμες υποχρεώσεις
+- Διάφορες Υποχρεώσεις
+- Υποχρεώσεις, auto total
+- Σύνολο Παθητικού, auto total
+
+### Extra
+
+- Πεδίο `Σχόλια`
+- Αυτόματοι υπολογισμοί totals
+- Mouse wheel scrolling
+
+---
+
+## 3. Αποτελέσματα Χρήσης
+
+Το τρίτο tab χρησιμοποιείται για καταχώριση Income Statement ανά:
+
+- εταιρεία
+- έτος
+
+### Νέα λογική v5.x
+
+Τα έξοδα καταχωρίζονται και αποθηκεύονται ως **θετικά ποσά**.  
+Η εφαρμογή τα αφαιρεί στους υπολογισμούς, αντί να βασίζεται σε παλιά λογική αρνητικών ποσών.
+
+---
+
+### Βασικά πεδία
+
+- Κύκλος εργασιών / net sales
+- Επιχορηγήσεις Δημοσίου
+- Κόστος πωλήσεων
+- Μικτό κέρδος / ζημιά, auto calculated
+
+---
+
+### Έξοδα
+
+- Έξοδα διοίκησης
+- Έξοδα διάθεσης
+- Έξοδα έρευνας
+- Έξοδα προβλέψεων
+- Λοιπά έξοδα εκμετάλλευσης
+- Ζημιές από επιμέτρηση αποθεμάτων
+- Άλλα έξοδα
+
+---
+
+### Έσοδα
+
+- Λοιπά έσοδα εκμετάλλευσης
+- Κέρδη από επιμέτρηση αποθεμάτων
+- Άλλα έσοδα
+
+---
+
+### EBITDA / Αποσβέσεις
+
+- EBITDA, manual input
+- Αποσβέσεις χρήσης - Ενσώματα πάγια
+- Αποσβέσεις χρήσης - Άυλα πάγια
+- Depreciations, auto total
+
+---
+
+### Χρηματοοικονομικό αποτέλεσμα
+
+Η σειρά στο template και στο app είναι:
+
+- Χρηματοοικονομικά έξοδα
+- Λοιπές Ζημιές
+- Έσοδα από μερίσματα
+- Χρηματοοικονομικά έσοδα
+- Λοιπά Κέρδη
+
+---
+
+### Auto-calculated fields
+
+- Μικτό κέρδος / ζημιά
+- EBIT
+- Depreciations
+- PBT
+- PAT
+
+---
+
+## 4. Δείκτες / Report
+
+Το τέταρτο tab υπολογίζει και εμφανίζει χρηματοοικονομικούς δείκτες για την επιλεγμένη εταιρεία.
+
+### Κύρια λειτουργία
+
+Ο χρήστης επιλέγει εταιρεία και πατά:
+
+```text
+Υπολογισμός
+```
+
+Η εφαρμογή εμφανίζει τους δείκτες για τα **τελευταία 3 διαθέσιμα έτη**.
+
+---
+
+## Δείκτες που υπολογίζονται
+
+### Επενδυτικοί
+
+- Profit Margin / Περιθώριο Καθαρού Κέρδους
+- Asset Turnover / Κεφαλαιακή Παραγωγικότητα Ενεργητικού
+- ROA / Απόδοση Συνόλου Ενεργητικού
+- Financial Leverage / Χρηματοοικονομική Μόχλευση
+- ROE / Απόδοση Ιδίων Κεφαλαίων
+
+### Ρευστότητας
+
+- Current Ratio
+- Quick Ratio
+
+### Επιχειρηματικής Αποδοτικότητας
+
+- Inventory Turnover Ratio
+- Inventory Days
+- Receivable Turnover Ratio
+- Receivable Days
+- Payable Turnover Ratio
+- Payable Days
+- Operating Cycle
+- Working Capital Requirements
+- Fixed Asset Turnover
+- Total Asset Turnover
+- EBIT
+- EBITDA
+- Depreciations
+
+---
+
+## Display formats
+
+| Δείκτης | Format |
+|---|---|
+| Profit Margin | Ποσοστό, 2 δεκαδικά |
+| ROA | Ποσοστό, 2 δεκαδικά |
+| ROE | Ποσοστό, 2 δεκαδικά |
+| Asset Turnover | Αριθμός, 4 δεκαδικά |
+| Financial Leverage | Αριθμός, 2 δεκαδικά |
+| EBIT | Ποσό με διαχωριστικά χιλιάδων |
+| EBITDA | Ποσό με διαχωριστικά χιλιάδων |
+| Depreciations | Ποσό με διαχωριστικά χιλιάδων |
+
+---
+
+## Σημειώσεις ανά δείκτη
+
+Στο Report tab υπάρχει textbox για σημείωση ανά δείκτη.  
+Οι σημειώσεις αποθηκεύονται στη SQLite βάση και εμφανίζονται στα reports.
+
+---
+
+## Export PDF
+
+Το PDF report περιλαμβάνει:
+
+### Page 1
+- Landscape orientation
+- Τίτλο με την επωνυμία της εταιρείας
+- ΑΦΜ και ΓΕΜΗ
+- Πίνακα δεικτών για τα τελευταία 3 διαθέσιμα έτη
+- Σημειώσεις ανά δείκτη
+- Footer
+
+### Page 2
+- Portrait orientation
+- Charts:
+  - EBIT
+  - ROA
+  - ROE
+
+---
+
+## Export XLSX
+
+Το XLSX report περιλαμβάνει:
+
+- `Ratios`
+- `Totals`
+- `Charts`
+- `Ισολογισμός`
+- `Αποτελέσματα Χρήσης`
+
+Τα extra statement sheets ακολουθούν τη σειρά του template.
+
+---
+
+## 5. Compare
+
+Το πέμπτο tab συγκρίνει όλες τις εταιρείες για συγκεκριμένο έτος.
+
+### Περιλαμβάνει
+
+- Dropdown επιλογής έτους
+- Button `Υπολογισμός`
+- Grid με:
+  - rows = εταιρείες
+  - columns = δείκτες
+- Sorting με κλικ στις επικεφαλίδες
+- Export σε XLSX
+
+---
+
+## 📥 Excel Import
+
+Η εφαρμογή διαβάζει Excel αρχεία που περιέχουν τα sheets:
+
+- `Κατάσταση Οικονομικής Θέσης`
+- `Κατάσταση Συνολικού Εισοδήματος`
+
+### Κατά το import
+
+- Διαβάζει τα έτη από τις επικεφαλίδες του Excel
+- Γεμίζει αυτόματα:
+  - Balance Sheet
+  - Income Statement
+- Συνδέει τα δεδομένα με υπάρχουσα εταιρεία ή δημιουργεί νέα
+- Μετατρέπει μικρά placeholder ποσά όπως `0.001` σε `0.00`
+- Μετατρέπει έξοδα / ζημιές / αποσβέσεις σε θετικά ποσά
+
+---
+
+## v5.7 formula-safe import
+
+Η v5.7 βελτιώνει το import για περιπτώσεις όπου το Excel template έχει formulas.
+
+Παράδειγμα:
+
+```excel
+=11584136+1959091
+```
+
+Η εφαρμογή προσπαθεί να διαβάσει σωστά την τιμή ακόμα και αν το Excel δεν έχει αποθηκευμένο cached result.
+
+---
+
+## ⚙️ Αρχείο ρυθμίσεων app.cfg
+
+Η εφαρμογή δημιουργεί ή χρησιμοποιεί αρχείο `app.cfg` στον ίδιο φάκελο.
+
+Παράδειγμα:
+
+```ini
+[app]
+db_path = corp_values.sqlite
+index_map_path = IndexMap.jpg
+```
+
+### Ρυθμίσεις
+
+- `db_path`: path της SQLite βάσης που ανοίγει αυτόματα στο startup
+- `index_map_path`: path του IndexMap image
+
+---
+
+## Menu εφαρμογής
+
+Το menu περιλαμβάνει:
+
+- `OpenDB`: άνοιγμα άλλης SQLite βάσης
+- `SaveDB`: αποθήκευση της τρέχουσας βάσης
+- `ConfigFileEdit`: άνοιγμα του `app.cfg` με default text editor
+- `IndexMap`: άνοιγμα του διαγράμματος IndexMap
 
 ---
 
 ## ▶️ Εκτέλεση
 
-```bash
+Σε Windows:
+
+```bat
 python -m pip install -r requirements.txt
-python app.py
+python app57.py
 ```
 
 ---
 
-## 📦 Build (.exe)
+## requirements.txt
 
-```bash
-pyinstaller --onefile --windowed app.py
+Ενδεικτικά:
+
+```text
+openpyxl>=3.1.2
+reportlab>=4.0.0
+pyinstaller>=6.0.0
 ```
+
+Το `tkinter` περιλαμβάνεται συνήθως στη standard Python εγκατάσταση στα Windows.
+
+---
+
+## 📦 Δημιουργία EXE
+
+### Simple build
+
+```bat
+pyinstaller --windowed app57.py
+```
+
+### Recommended stable distribution
+
+```bat
+pyinstaller --onedir --windowed app57.py
+```
+
+Το `onedir` build είναι συνήθως πιο αξιόπιστο σε άλλους υπολογιστές από το `onefile`.
+
+---
+
+## Windows SmartScreen / Defender
+
+Επειδή το exe είναι unsigned και φτιαγμένο με PyInstaller, μπορεί να εμφανιστεί προειδοποίηση από Windows Defender ή SmartScreen.
+
+Λύσεις:
+
+- Right click στο exe → Properties → Unblock
+- Run as administrator
+- Windows Security → Protection History → Allow on device
+- Add folder exclusion για τον φάκελο της εφαρμογής
+- Χρήση `onedir` build αντί για `onefile`
+
+---
+
+## Τεχνικές σημειώσεις
+
+- Για ορισμένους δείκτες χρειάζεται προηγούμενο έτος.
+- Η εφαρμογή εμφανίζει στο Report tab τα τελευταία 3 διαθέσιμα έτη.
+- Τα έξοδα αποθηκεύονται ως θετικές τιμές (δεν χρειάζεται η προσθήκη του "-" ).
+- Οι υπολογισμοί αφαιρούν έξοδα και ζημιές μέσα στον αλγόριθμο.
+- Οι φόροι διατηρούν το πρόσημο του template.
+- Το PDF χρησιμοποιεί Unicode-compatible fonts όπου υπάρχουν διαθέσιμα.
+- Η βάση είναι SQLite και αποθηκεύεται τοπικά.
+
+---
+
+## Προτεινόμενη διαδικασία χρήσης
+
+1. Δημιουργήστε ή ανοίξτε SQLite βάση.
+2. Πηγαίνετε στο tab `Companies`.
+3. Δημιουργήστε εταιρεία ή κάντε import από Excel.
+4. Ελέγξτε τα tabs:
+   - `Ισολογισμός`
+   - `Αποτελέσματα Χρήσης`
+5. Πηγαίντε στο tab `Δείκτες / Report`.
+6. Πατήστε `Υπολογισμός`.
+7. Προσθέστε σημειώσεις ανά δείκτη, αν χρειάζεται.
+8. Κάντε export σε PDF ή XLSX.
+9. Χρησιμοποίηστε το tab `Compare` για σύγκριση εταιρειών.
+
+---
+
+## Μελλοντικές πιθανές βελτιώσεις
+
+- Auto backup της SQLite βάσης
+- Web έκδοση με FastAPI + Streamlit ή React
+- Installer με Inno Setup ή NSIS
+
+---
+
+## License / Ownership
+
+MIT License
