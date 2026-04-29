@@ -1,4 +1,4 @@
-# CORP Valuation app v5.7 by George Tsakalos
+# CORP Valuation app v5.9 by George Tsakalos
 
 
 import configparser
@@ -39,7 +39,7 @@ except Exception:
 
 
 # CFG Defaults 
-APP_TITLE = "CORP Valuation app v5.7 (by G.Tsakalos)"
+APP_TITLE = "CORP Valuation app v5.9 (by G.Tsakalos)"
 DEFAULT_DB = "corp_values.sqlite"
 DEFAULT_CFG = "app.cfg"
 DEFAULT_INDEX_MAP = "IndexMap.jpg"
@@ -262,10 +262,14 @@ def iter_grouped_ratios():
         for ratio_name in ratio_names:
             yield ("ratio", ratio_name)
 
+# Display/export formatting policies.
+# v5.0 intentionally treats Asset Turnover and Financial Leverage as plain ratios,
+# while Profit Margin, ROA and ROE are rendered as percentages.
 PERCENT_RATIOS = {
     "Profit Margin (Περιθώριο Καθαρού Κέρδους)",
     "ROA (Απόδοση Συνόλου Ενεργητικού)",
-    "ROE (Απόδοση Ι/Κ)",}
+    "ROE (Απόδοση Ι/Κ)",
+}
 
 PLAIN_RATIO_RATIOS = {
     "Asset Turnover (Κεφαλ. Παραγωγικ. Ενεργητικού)",
@@ -276,17 +280,21 @@ PLAIN_RATIO_RATIOS = {
     "Receivable Turnover Ratio (Κυκλοφορ. Ταχύτ. Απαιτήσεων σε φορές)",
     "Payable Turnover Ratio (Κυκλοφορ. Ταχύτ. Υποχρεώσεων σε φορές)",
     "Fixed Asset Turnover (Κυκλοφορ. Ταχύτ. Πάγιου Ενεργητικού σε φορές)",
-    "Total Asset Turnover (Κυκλοφορ. Ταχύτ. Ενεργητικού σε φορές)",}
+    "Total Asset Turnover (Κυκλοφορ. Ταχύτ. Ενεργητικού σε φορές)",
+}
 
 AMOUNT_RATIOS = {
     "Working Capital Requirements (Ανάγκες σε Κ/Κ)",
     "EBIT",
     "EBITDA",
-    "Depreciations (Αποσβέσεις Χρήσης)",}
+    "Depreciations (Αποσβέσεις Χρήσης)",
+}
 
-
+# v5.5: Asset Turnover needs 4 decimals in reports/exports, because
+# two decimals can hide important differences in very asset-heavy companies.
 DECIMAL4_RATIOS = {
-    "Asset Turnover (Κεφαλ. Παραγωγικ. Ενεργητικού)",}
+    "Asset Turnover (Κεφαλ. Παραγωγικ. Ενεργητικού)",
+}
 
 def format_ratio_display(ratio_name: str, value):
     if value is None:
@@ -352,13 +360,9 @@ def format_thousands_dot(value):
         return ""
     try:
         v = float(value)
-        negative = v < 0
-        v = abs(v)
-        if abs(v - round(v)) < 1e-9:
-            s = f"{int(round(v)):,}".replace(",", ".")
-        else:
-            s = f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        return f"-{s}" if negative else s
+        if is_effectively_zero(v - round(v)):
+            return f"{int(round(v)):,}".replace(",", ".")
+        return f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     except Exception:
         return str(value)
 
@@ -445,6 +449,14 @@ def div(a, b):
         return a / b
     except Exception:
         return None
+
+
+def is_effectively_zero(value, eps: float = 1e-9) -> bool:
+    try:
+        v = safe_float(value)
+        return -eps < v < eps
+    except Exception:
+        return True
 
 
 def ensure_default_cfg(cfg_path: str):
@@ -890,33 +902,37 @@ def signed_income_amount(value) -> float:
     return safe_float(value)
 
 
-def expense_amount(value) -> float:
-    """Expense/cost/tax/depreciation rows are treated as costs regardless of stored sign."""
-    return abs(safe_float(value))
+def signed_amount(value) -> float:
+    """Return the signed amount exactly as stored.
+
+    v5.8: do NOT force expenses/losses/depreciation/taxes to absolute values.
+    The calculation flow follows Template_full.xlsx: expense rows are subtracted
+    by formula, so a negative amount must remain negative.
+    """
+    return safe_float(value)
 
 
 def calc_income_totals(data: dict) -> dict:
     """
     Income Statement subtotals aligned to the latest Excel template.
 
-    The app now displays expense rows as positive amounts. Therefore totals subtract
-    expense fields and add income fields explicitly, instead of relying on old
-    negative-value summing conventions.
+    The formula flow follows Template_full.xlsx. Amount signs are preserved:
+    expense/loss rows are subtracted by formula, while income/gain rows are added.
     """
     net_sales = safe_float(data.get("net_sales"))
     state_grants = safe_float(data.get("state_grants"))
-    cost_of_sales = expense_amount(data.get("cost_of_sales"))
+    cost_of_sales = signed_amount(data.get("cost_of_sales"))
 
     gross_profit = net_sales + state_grants - cost_of_sales
 
     # Operating expenses
-    admin_expenses = expense_amount(data.get("admin_expenses"))
-    selling_expenses = expense_amount(data.get("selling_expenses"))
-    research_expenses = expense_amount(data.get("research_expenses"))
-    provisions_expenses = expense_amount(data.get("provisions_expenses"))
-    other_operating_expenses = expense_amount(data.get("other_operating_expenses"))
-    inventory_revaluation_losses = expense_amount(data.get("inventory_revaluation_losses"))
-    other_expenses = expense_amount(data.get("other_expenses"))
+    admin_expenses = signed_amount(data.get("admin_expenses"))
+    selling_expenses = signed_amount(data.get("selling_expenses"))
+    research_expenses = signed_amount(data.get("research_expenses"))
+    provisions_expenses = signed_amount(data.get("provisions_expenses"))
+    other_operating_expenses = signed_amount(data.get("other_operating_expenses"))
+    inventory_revaluation_losses = signed_amount(data.get("inventory_revaluation_losses"))
+    other_expenses = signed_amount(data.get("other_expenses"))
 
     # Operating income
     operating_income = safe_float(data.get("other_operating_income"))
@@ -937,16 +953,16 @@ def calc_income_totals(data: dict) -> dict:
         - other_expenses
     )
 
-    depr_tangible = expense_amount(data.get("depr_tangible"))
-    depr_intangible = expense_amount(data.get("depr_intangible"))
+    depr_tangible = signed_amount(data.get("depr_tangible"))
+    depr_intangible = signed_amount(data.get("depr_intangible"))
     depreciation = depr_tangible + depr_intangible
 
     ebitda = safe_float(data.get("ebitda_manual"))
 
     # Financial block: dividends/income/gains add; expenses/losses subtract.
     dividend_income = safe_float(data.get("dividend_income"))
-    financial_expenses = expense_amount(data.get("financial_expenses"))
-    other_financial_losses = expense_amount(data.get("other_financial_losses"))
+    financial_expenses = signed_amount(data.get("financial_expenses"))
+    other_financial_losses = signed_amount(data.get("other_financial_losses"))
     financial_income = safe_float(data.get("financial_income"))
     other_financial_gains = safe_float(data.get("other_financial_gains"))
 
@@ -980,14 +996,14 @@ def build_analysis(company: dict, year: int, balance: dict, income: dict, prev_b
     it = calc_income_totals(income)
     prev_bt = calc_balance_totals(prev_balance) if prev_balance else None
 
-    # Investment ratios 
+    # Investment ratios - aligned with the updated Excel template.
     profit_margin = div(it["pat"], safe_float(income.get("net_sales")))
     asset_turnover = div(safe_float(income.get("net_sales")), bt["total_assets"])
     roa = None if profit_margin is None or asset_turnover is None else profit_margin * asset_turnover
     financial_leverage = div(bt["total_liabilities_equity"], bt["equity"])
     roe = None if roa is None or financial_leverage is None else roa * financial_leverage
 
-    # Liquidity ratios 
+    # Liquidity ratios.
     current_ratio = div(bt["current_assets"], safe_float(balance.get("short_term_liabilities")))
     quick_ratio = div(bt["current_assets"] - safe_float(balance.get("inventory")), safe_float(balance.get("short_term_liabilities")))
 
@@ -1002,10 +1018,10 @@ def build_analysis(company: dict, year: int, balance: dict, income: dict, prev_b
         avg_receivables = (safe_float(balance.get("trade_receivables")) + safe_float(prev_balance.get("trade_receivables"))) / 2
         avg_payables = (safe_float(balance.get("short_term_liabilities")) + safe_float(prev_balance.get("short_term_liabilities"))) / 2
 
-        # The app stores / displays costs as positive amounts, but the template uses
-        # a leading minus in these turnover formulas.  Using -abs(...) makes the
-        # result stable even if an older database still contains negative expense rows.
-        cost_for_turnover = expense_amount(income.get("cost_of_sales"))
+        # Updated formulas from the uploaded Excel template (ΔΕΙΚΤΕΣ_ΕΠΙΧ_ΑΠΟΔΟΤ).
+        # Template_full.xlsx uses a leading minus in these turnover formulas.
+        # Keep cost_of_sales signed and apply the formula flow directly.
+        cost_for_turnover = signed_amount(income.get("cost_of_sales"))
         signed_cost_for_turnover = -cost_for_turnover
 
         inventory_turnover = div(signed_cost_for_turnover, avg_inventory)
@@ -1018,6 +1034,7 @@ def build_analysis(company: dict, year: int, balance: dict, income: dict, prev_b
         payable_turnover = div(-(cost_for_turnover + inventory_change), avg_payables)
         payable_days = div(365, payable_turnover) if payable_turnover not in (None, 0) else None
 
+        # The updated workbook currently uses Receivable Days - Payable Days for Operating Cycle.
         if payable_days is not None and receivable_days is not None:
             operating_cycle = receivable_days - payable_days
 
@@ -1083,7 +1100,7 @@ def extract_years_from_income_sheet(ws):
 def clean_import_value(value):
     """Import helper: workbook placeholder 0.001 values are treated as real zero."""
     v = safe_float(value)
-    return 0.0 if abs(v) < 0.01 else v
+    return 0.0 if -0.01 < v < 0.01 else v
 
 
 
@@ -1183,8 +1200,6 @@ def parse_excel_template(file_path: str):
         parsed.setdefault(year, {"balance": {}, "income": {}})
         for row, key in INCOME_IMPORT_MAP.items():
             value = clean_import_value(_formula_cell_value(income_ws, income_ws_f, row, col))
-            if key in expense_like:
-                value = abs(value)
             parsed[year]["income"][key] = value
 
     return {year: values for year, values in parsed.items() if values["balance"] or values["income"]}
@@ -1224,6 +1239,8 @@ def apply_template_third_year_adjustment(analyses: list[dict], company: dict, db
     ratios["ROA (Απόδοση Συνόλου Ενεργητικού)"] = roa
     ratios["Financial Leverage (Χρημ/ική Μόχλευση)"] = financial_leverage
     ratios["ROE (Απόδοση Ι/Κ)"] = roe
+
+    # Match the workbook's Current Ratio for the 3rd displayed year.
     ratios["Current Ratio (Κεφ./Κίνησης)"] = div(bt_prev["current_assets"], safe_float(prev_balance.get("short_term_liabilities")))
     return analyses
 
@@ -1594,7 +1611,7 @@ class BalanceSheetTab(BaseStatementTab):
 
     def populate_fields(self, row):
         for k in self.input_vars:
-            self.input_vars[k].set("" if abs(safe_float(row.get(k))) < 0.0000001 else format_thousands_dot(row.get(k, "")))
+            self.input_vars[k].set("" if is_effectively_zero(row.get(k), 0.0000001) else format_thousands_dot(row.get(k, "")))
         self.comments_text.delete("1.0", "end")
         self.comments_text.insert("1.0", row.get("comments", ""))
         self.update_auto_fields()
@@ -1651,33 +1668,18 @@ class IncomeSheetTab(BaseStatementTab):
         self.update_auto_fields()
 
     def populate_fields(self, row):
-        expense_like = {
-            "cost_of_sales", "admin_expenses", "selling_expenses", "research_expenses",
-            "provisions_expenses", "other_operating_expenses", "inventory_revaluation_losses",
-            "other_expenses", "depr_tangible", "depr_intangible", "financial_expenses",
-            "other_financial_losses"
-        }
         for k in self.input_vars:
             value = safe_float(row.get(k))
-            if k in expense_like:
-                value = abs(value)
-            self.input_vars[k].set("" if abs(value) < 0.0000001 else format_thousands_dot(value))
+            self.input_vars[k].set("" if is_effectively_zero(value, 0.0000001) else format_thousands_dot(value))
         self.comments_text.delete("1.0", "end")
         self.comments_text.insert("1.0", row.get("comments", ""))
         self.update_auto_fields()
 
     def collect_payload(self):
-        if abs(safe_float(self.input_vars["ebitda_manual"].get())) < 0.0000001:
+        if is_effectively_zero(self.input_vars["ebitda_manual"].get(), 0.0000001):
             raise RuntimeError("Το πεδίο EBITDA πρέπει να συμπληρώνεται από τον χρήστη.")
         payload = {k: safe_float(v.get()) for k, v in self.input_vars.items()}
-        # v5.3: store expense/cost/depreciation/loss rows as positive values, like the Excel template.
-        for k in {
-            "cost_of_sales", "admin_expenses", "selling_expenses", "research_expenses",
-            "provisions_expenses", "other_operating_expenses", "inventory_revaluation_losses",
-            "other_expenses", "depr_tangible", "depr_intangible", "financial_expenses",
-            "other_financial_losses"
-        }:
-            payload[k] = abs(payload.get(k, 0.0))
+        # v5.9: keep the exact sign entered by the user. Some template amounts may be negative.
         payload["comments"] = self.comments_text.get("1.0", "end").strip()
         return payload
 
@@ -2170,6 +2172,7 @@ class AnalysisTab(ttk.Frame):
 
             add_report_charts_sheet(wb, self.current_report_rows[:3])
 
+            # Extra sheets requested in v5.2: source statement records used for the report.
             export_years = [a["year"] for a in self.current_report_rows[:3]]
             if self.current_company:
                 append_statement_sheet_to_workbook(wb, "Ισολογισμός", self.current_company, export_years, self.app.db, "balance")
