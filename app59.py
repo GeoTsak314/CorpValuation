@@ -263,7 +263,7 @@ def iter_grouped_ratios():
             yield ("ratio", ratio_name)
 
 # Display/export formatting policies.
-# v5.0 intentionally treats Asset Turnover and Financial Leverage as plain ratios,
+# v5.+ intentionally treats Asset Turnover and Financial Leverage as plain ratios,
 # while Profit Margin, ROA and ROE are rendered as percentages.
 PERCENT_RATIOS = {
     "Profit Margin (Περιθώριο Καθαρού Κέρδους)",
@@ -290,8 +290,6 @@ AMOUNT_RATIOS = {
     "Depreciations (Αποσβέσεις Χρήσης)",
 }
 
-# v5.5: Asset Turnover needs 4 decimals in reports/exports, because
-# two decimals can hide important differences in very asset-heavy companies.
 DECIMAL4_RATIOS = {
     "Asset Turnover (Κεφαλ. Παραγωγικ. Ενεργητικού)",
 }
@@ -495,11 +493,11 @@ def register_pdf_fonts():
     regular, bold = get_reportlab_font_paths()
     if regular and bold:
         try:
-            if "corp-Regular" not in pdfmetrics.getRegisteredFontNames():
-                pdfmetrics.registerFont(TTFont("corp-Regular", regular))
-            if "corp-Bold" not in pdfmetrics.getRegisteredFontNames():
-                pdfmetrics.registerFont(TTFont("corp-Bold", bold))
-            return ("corp-Regular", "corp-Bold")
+            if "CORP-Regular" not in pdfmetrics.getRegisteredFontNames():
+                pdfmetrics.registerFont(TTFont("CORP-Regular", regular))
+            if "CORP-Bold" not in pdfmetrics.getRegisteredFontNames():
+                pdfmetrics.registerFont(TTFont("CORP-Bold", bold))
+            return ("CORP-Regular", "CORP-Bold")
         except Exception:
             pass
     return ("Helvetica", "Helvetica-Bold")
@@ -995,15 +993,13 @@ def build_analysis(company: dict, year: int, balance: dict, income: dict, prev_b
     bt = calc_balance_totals(balance)
     it = calc_income_totals(income)
     prev_bt = calc_balance_totals(prev_balance) if prev_balance else None
-
-    # Investment ratios - aligned with the updated Excel template.
     profit_margin = div(it["pat"], safe_float(income.get("net_sales")))
     asset_turnover = div(safe_float(income.get("net_sales")), bt["total_assets"])
     roa = None if profit_margin is None or asset_turnover is None else profit_margin * asset_turnover
     financial_leverage = div(bt["total_liabilities_equity"], bt["equity"])
     roe = None if roa is None or financial_leverage is None else roa * financial_leverage
 
-    # Liquidity ratios.
+    # Liquidity ratios 
     current_ratio = div(bt["current_assets"], safe_float(balance.get("short_term_liabilities")))
     quick_ratio = div(bt["current_assets"] - safe_float(balance.get("inventory")), safe_float(balance.get("short_term_liabilities")))
 
@@ -1018,32 +1014,29 @@ def build_analysis(company: dict, year: int, balance: dict, income: dict, prev_b
         avg_receivables = (safe_float(balance.get("trade_receivables")) + safe_float(prev_balance.get("trade_receivables"))) / 2
         avg_payables = (safe_float(balance.get("short_term_liabilities")) + safe_float(prev_balance.get("short_term_liabilities"))) / 2
 
-        # Updated formulas from the uploaded Excel template (ΔΕΙΚΤΕΣ_ΕΠΙΧ_ΑΠΟΔΟΤ).
-        # Template_full.xlsx uses a leading minus in these turnover formulas.
-        # Keep cost_of_sales signed and apply the formula flow directly.
         cost_for_turnover = signed_amount(income.get("cost_of_sales"))
-        signed_cost_for_turnover = -cost_for_turnover
 
-        inventory_turnover = div(signed_cost_for_turnover, avg_inventory)
+        inventory_turnover = div(cost_for_turnover, avg_inventory)
         inventory_days = div(365, inventory_turnover) if inventory_turnover not in (None, 0) else None
 
-        receivable_turnover = div(signed_cost_for_turnover, avg_receivables)
+        receivable_turnover = div(cost_for_turnover, avg_receivables)
         receivable_days = div(365, receivable_turnover) if receivable_turnover not in (None, 0) else None
 
         inventory_change = safe_float(balance.get("inventory")) - safe_float(prev_balance.get("inventory"))
-        payable_turnover = div(-(cost_for_turnover + inventory_change), avg_payables)
+        payable_turnover = div(cost_for_turnover + inventory_change, avg_payables)
         payable_days = div(365, payable_turnover) if payable_turnover not in (None, 0) else None
 
-        # The updated workbook currently uses Receivable Days - Payable Days for Operating Cycle.
-        if payable_days is not None and receivable_days is not None:
-            operating_cycle = receivable_days - payable_days
+        # Operating Cycle = Inventory Days + Receivable Days - Payable Days.
+        if inventory_days is not None and payable_days is not None and receivable_days is not None:
+            operating_cycle = inventory_days + receivable_days - payable_days
 
         prev_bt_for_turnover = calc_balance_totals(prev_balance)
         total_revenue_for_turnover = safe_float(income.get("net_sales")) + safe_float(income.get("other_operating_income"))
-        fixed_asset_turnover = div(total_revenue_for_turnover, prev_bt_for_turnover["non_current_assets"] - bt["non_current_assets"])
-        total_asset_turnover_2 = div(total_revenue_for_turnover, prev_bt_for_turnover["total_assets"] - bt["total_assets"])
+        fixed_asset_denominator = (bt["non_current_assets"] - prev_bt_for_turnover["non_current_assets"]) / 2
+        total_asset_denominator = (bt["total_assets"] - prev_bt_for_turnover["total_assets"]) / 2
+        fixed_asset_turnover = div(total_revenue_for_turnover, fixed_asset_denominator)
+        total_asset_turnover_2 = div(total_revenue_for_turnover, total_asset_denominator)
 
-    # The updated template's EBIT in the indicators area is EBITDA - Depreciations.
     indicator_ebit = it["ebitda"] - it["depreciation"]
 
     return {
@@ -1239,8 +1232,6 @@ def apply_template_third_year_adjustment(analyses: list[dict], company: dict, db
     ratios["ROA (Απόδοση Συνόλου Ενεργητικού)"] = roa
     ratios["Financial Leverage (Χρημ/ική Μόχλευση)"] = financial_leverage
     ratios["ROE (Απόδοση Ι/Κ)"] = roe
-
-    # Match the workbook's Current Ratio for the 3rd displayed year.
     ratios["Current Ratio (Κεφ./Κίνησης)"] = div(bt_prev["current_assets"], safe_float(prev_balance.get("short_term_liabilities")))
     return analyses
 
@@ -1679,7 +1670,6 @@ class IncomeSheetTab(BaseStatementTab):
         if is_effectively_zero(self.input_vars["ebitda_manual"].get(), 0.0000001):
             raise RuntimeError("Το πεδίο EBITDA πρέπει να συμπληρώνεται από τον χρήστη.")
         payload = {k: safe_float(v.get()) for k, v in self.input_vars.items()}
-        # v5.9: keep the exact sign entered by the user. Some template amounts may be negative.
         payload["comments"] = self.comments_text.get("1.0", "end").strip()
         return payload
 
@@ -2172,7 +2162,6 @@ class AnalysisTab(ttk.Frame):
 
             add_report_charts_sheet(wb, self.current_report_rows[:3])
 
-            # Extra sheets requested in v5.2: source statement records used for the report.
             export_years = [a["year"] for a in self.current_report_rows[:3]]
             if self.current_company:
                 append_statement_sheet_to_workbook(wb, "Ισολογισμός", self.current_company, export_years, self.app.db, "balance")
