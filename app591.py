@@ -1032,8 +1032,8 @@ def build_analysis(company: dict, year: int, balance: dict, income: dict, prev_b
 
         prev_bt_for_turnover = calc_balance_totals(prev_balance)
         total_revenue_for_turnover = safe_float(income.get("net_sales")) + safe_float(income.get("other_operating_income"))
-        fixed_asset_denominator = (bt["non_current_assets"] - prev_bt_for_turnover["non_current_assets"]) / 2
-        total_asset_denominator = (bt["total_assets"] - prev_bt_for_turnover["total_assets"]) / 2
+        fixed_asset_denominator = (bt["non_current_assets"] + prev_bt_for_turnover["non_current_assets"]) / 2
+        total_asset_denominator = (bt["total_assets"] + prev_bt_for_turnover["total_assets"]) / 2
         fixed_asset_turnover = div(total_revenue_for_turnover, fixed_asset_denominator)
         total_asset_turnover_2 = div(total_revenue_for_turnover, total_asset_denominator)
 
@@ -1432,7 +1432,7 @@ class ScrollableEntryPanel(ttk.Frame):
             self.canvas.yview_scroll(-3, "units")
         elif getattr(event, "num", None) == 5:
             self.canvas.yview_scroll(3, "units")
-        return "break"
+        return None
 
     def _bind_mousewheel(self, widget):
         widget.bind("<MouseWheel>", self._on_mousewheel, add="+")
@@ -2361,6 +2361,7 @@ class App(tk.Tk):
         self.bind_class("Text", "<MouseWheel>", self._on_text_mousewheel, add="+")
         self.bind_class("Text", "<Button-4>", self._on_text_mousewheel, add="+")
         self.bind_class("Text", "<Button-5>", self._on_text_mousewheel, add="+")
+        self.enable_clipboard_shortcuts()
 
         menubar = tk.Menu(self)
         app_menu = tk.Menu(menubar, tearoff=0)
@@ -2404,7 +2405,7 @@ class App(tk.Tk):
             widget.yview_scroll(-3, "units")
         elif getattr(event, "num", None) == 5:
             widget.yview_scroll(3, "units")
-        return "break"
+        return None
 
     def _on_text_mousewheel(self, event):
         widget = event.widget
@@ -2414,7 +2415,7 @@ class App(tk.Tk):
             widget.yview_scroll(-3, "units")
         elif getattr(event, "num", None) == 5:
             widget.yview_scroll(3, "units")
-        return "break"
+        return None
 
     def on_close(self):
         try:
@@ -2503,7 +2504,58 @@ class App(tk.Tk):
         except Exception as e:
             messagebox.showerror(APP_TITLE, f"Αδυναμία ανοίγματος IndexMap:\n{e}")
 
+    def enable_clipboard_shortcuts(self):
+        def copy_text(event):
+            try:
+                widget = event.widget
+                selected = widget.selection_get()
+                self.clipboard_clear()
+                self.clipboard_append(selected)
+            except Exception:
+                pass
+            return "break"
 
+        def paste_text(event):
+            try:
+                widget = event.widget
+                text = self.clipboard_get()
+                widget.insert("insert", text)
+            except Exception:
+                pass
+            return "break"
+
+        def cut_text(event):
+            try:
+                widget = event.widget
+                selected = widget.selection_get()
+                self.clipboard_clear()
+                self.clipboard_append(selected)
+                widget.delete("sel.first", "sel.last")
+            except Exception:
+                pass
+            return "break"
+
+        def select_all(event):
+            try:
+                widget = event.widget
+                widget.select_range(0, "end")
+                widget.icursor("end")
+            except Exception:
+                try:
+                    widget.tag_add("sel", "1.0", "end")
+                except Exception:
+                    pass
+            return "break"
+
+        for cls in ("Entry", "TEntry", "Text"):
+            self.bind_class(cls, "<Control-c>", copy_text, add="+")
+            self.bind_class(cls, "<Control-C>", copy_text, add="+")
+            self.bind_class(cls, "<Control-v>", paste_text, add="+")
+            self.bind_class(cls, "<Control-V>", paste_text, add="+")
+            self.bind_class(cls, "<Control-x>", cut_text, add="+")
+            self.bind_class(cls, "<Control-X>", cut_text, add="+")
+            self.bind_class(cls, "<Control-a>", select_all, add="+")
+            self.bind_class(cls, "<Control-A>", select_all, add="+")
 
 
 
